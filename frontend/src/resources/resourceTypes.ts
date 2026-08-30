@@ -13,6 +13,7 @@ export type PrismResource = {
   destLon?: number;
   destLat?: number;
   origin?: { lat: number; lng: number };
+  altTarget?: { lat: number; lng: number };
   etaMin?: number;
   mission?: string;
 };
