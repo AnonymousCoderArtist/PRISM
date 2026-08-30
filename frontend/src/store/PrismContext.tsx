@@ -1,10 +1,10 @@
 import { createContext, useContext, useState, useMemo, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
-import type { AppViewState, Report, Source, Incident } from "../types/prism";
-import { mockIncidents, mockResources, simReportPool, simSourcePool, wardActivity, globalActivity } from "../data/mock";
+import type { AppViewState, Report, Source, Incident, Resource } from "../types/prism";
+import { mockIncidents, mockResources, mockReports, simReportPool, simSourcePool, wardActivity, globalActivity } from "../data/mock";
 import type { PrismResource } from "../resources/resourceTypes";
-import { toPrismResource } from "../resources/resourceTypes";
 import { SIMULATED_RESOURCES, stepSimulatedResources } from "../resources/simulatedResources";
+import { fetchIncidents, fetchReports, fetchPrismResources, fetchAreas, wsUrl } from "../services/api";
 
 type PlanAssignment = {
   id: string;
@@ -21,8 +21,8 @@ type PrismContextValue = AppViewState & {
   setMapMode: (m: AppViewState["mapMode"]) => void;
   setSimulationState: (s: AppViewState["simulationState"]) => void;
   selectedWardName: string | null;
-  incidents: Incident[]; // verification-gated: empty at idle, populates after SIMULATE
-  resources: typeof mockResources;
+  incidents: Incident[];
+  resources: Resource[];
   prismResources: PrismResource[];
   selectedResourceId: string | null;
   selectResource: (id: string | null) => void;
@@ -39,7 +39,7 @@ type PrismContextValue = AppViewState & {
     reportsEndpoint: "GET /api/reports";
     incidentsEndpoint: "GET /api/incidents";
     resourcesEndpoint: "GET /api/resources";
-    wsEndpoint: "WS /ws/live";
+    wsEndpoint: "WS /api/simulation/ws/live";
   };
 };
 
@@ -57,15 +57,15 @@ export function PrismProvider({ children }: { children: ReactNode }) {
   const [mapMode, setMapMode] = useState<AppViewState["mapMode"]>("wards");
   const [simulationState, setSimulationState] = useState<AppViewState["simulationState"]>("idle");
 
-  // IDLE = truly empty — backend not connected
   const [reports, setReports] = useState<Report[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [areas, setAreas] = useState<WardProperties[]>([]);
   const [activity, setActivity] = useState<number[]>(globalActivity);
   const [plan, setPlan] = useState<PlanAssignment[]>([]);
   const [planPhase, setPlanPhase] = useState<PrismContextValue["planPhase"]>("idle");
   const [movingAssets, setMovingAssets] = useState<PrismContextValue["movingAssets"]>([]);
-  // Start hidden — only appear after SIMULATE → plan ready (user request)
   const [prismResources, setPrismResources] = useState<PrismResource[]>(() => []);
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
   const [resourceTrails, setResourceTrails] = useState<Map<string, [number, number][]>>(() => new Map());
@@ -73,6 +73,53 @@ export function PrismProvider({ children }: { children: ReactNode }) {
   const reportIdx = useRef(0);
   const sourceIdx = useRef(0);
   const simCounter = useRef(0);
+
+  // ---- Load areas on mount ----
+  useEffect(() => {
+    let cancelled = false;
+    fetchAreas()
+      .then(data => {
+        if (!cancelled) setAreas(data);
+      })
+      .catch(() => {
+        // areas remain empty if fetch fails
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ---- Load initial data when simulation starts (API first, mock fallback) ----
+  useEffect(() => {
+    if (simulationState !== "running") return;
+    let cancelled = false;
+
+    async function loadInitialData() {
+      try {
+        const [incidentsData, reportsData, resourcesData] = await Promise.all([
+          fetchIncidents(),
+          fetchReports(),
+          fetchResources(),
+        ]);
+        if (!cancelled) {
+          setIncidents(incidentsData);
+          setReports(reportsData);
+          setResources(resourcesData);
+        }
+      } catch {
+        if (!cancelled) {
+          setIncidents(mockIncidents);
+          setReports(mockReports);
+          setResources(mockResources);
+        }
+      }
+    }
+
+    loadInitialData();
+    return () => {
+      cancelled = true;
+    };
+  }, [simulationState]);
 
   // ---- Activity always ongoing ----
   useEffect(() => {
@@ -239,20 +286,17 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/resources", { signal: AbortSignal.timeout(1400) });
-        if (!res.ok) throw new Error("no api");
-        const data = await res.json();
+        const data = await fetchPrismResources(AbortSignal.timeout(1400));
         if (Array.isArray(data) && data.length && !cancelled) {
-          const adapted = (data as unknown[]).map(u => toPrismResource(u)).filter(Boolean) as PrismResource[];
-          if (adapted.length) {
-            setPrismResources(adapted);
-            const m = new Map<string, [number, number][]>();
-            for (const r of adapted) m.set(r.id, [[r.lng, r.lat]]);
-            setResourceTrails(m);
-            return;
-          }
+          setPrismResources(data);
+          const m = new Map<string, [number, number][]>();
+          for (const r of data) m.set(r.id, [[r.lng, r.lat]]);
+          setResourceTrails(m);
+          return;
         }
-      } catch { /* keep simulated */ }
+      } catch {
+        // keep simulated
+      }
       if (cancelled) return;
       // No backend — dispatch simulated fleet now (first appearance)
       setPrismResources(prev => prev.length ? prev : SIMULATED_RESOURCES.slice());
@@ -292,6 +336,82 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(id);
   }, [planPhase]);
 
+  // ---- WebSocket live updates ----
+  useEffect(() => {
+    if (simulationState !== "running") return;
+
+    const url = wsUrl();
+    const ws = new WebSocket(url);
+
+    ws.onopen = () => {
+      // connection established — live feed active
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        const eventType = msg.event;
+        const payload = msg.payload;
+
+        if (eventType === "REPORT_RECEIVED") {
+          setReports(prev => {
+            const report: Report = {
+              id: `RPT-WS-${Date.now()}`,
+              incidentId: "",
+              wardCode: 0,
+              text: `${payload.source ?? "unknown"} @ ${payload.location ?? "unknown"}`,
+              time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false }),
+              source: "field",
+              verified: false,
+            };
+            return [report, ...prev].slice(0, 32);
+          });
+        } else if (eventType === "INCIDENT_UPDATED") {
+          setIncidents(prev =>
+            prev.map(inc =>
+              inc.id === payload.incident_id
+                ? { ...inc, status: payload.status === "active" ? "reported" : payload.status === "monitoring" ? "verified" : payload.status === "contained" ? "dispatched" : payload.status === "resolved" ? "resolved" : inc.status }
+                : inc
+            )
+          );
+        } else if (eventType === "RESOURCE_ASSIGNED") {
+          setMovingAssets(prev => [
+            ...prev,
+            {
+              id: `MOV-WS-${payload.resource_id}`,
+              lon: 91.73,
+              lat: 26.14,
+              label: `${payload.resource_id} → ${payload.incident_id}`,
+              kind: "ambulance",
+              progress: 0,
+              trail: [[91.73, 26.14]],
+              etaMin: payload.eta_minutes ?? 10,
+              totalMin: payload.eta_minutes ?? 10,
+            },
+          ]);
+        } else if (eventType === "INFORMATION_VOID_DETECTED") {
+          // void state can be updated here if needed
+        } else if (eventType === "SIMULATION_TICK") {
+          // tick counter or phase updates can be handled here
+        }
+      } catch {
+        // ignore malformed WS messages
+      }
+    };
+
+    ws.onclose = () => {
+      // WebSocket closed — local simulation continues as fallback
+    };
+
+    ws.onerror = () => {
+      ws.close();
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [simulationState]);
+
   useEffect(() => {
     if (simulationState === "idle") {
       reportIdx.current = 0;
@@ -300,6 +420,7 @@ export function PrismProvider({ children }: { children: ReactNode }) {
       setReports([]);
       setSources([]);
       setIncidents([]);
+      setResources([]);
       setPlan([]);
       setPlanPhase("idle");
       setMovingAssets([]);
@@ -326,7 +447,7 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     setSimulationState,
     selectedWardName: selectedWardCode ? incidents.find(i => i.wardCode === selectedWardCode)?.wardName ?? `Ward ${selectedWardCode}` : null,
     incidents,
-    resources: mockResources,
+    resources,
     prismResources,
     selectedResourceId,
     selectResource: setSelectedResourceId,
@@ -343,9 +464,9 @@ export function PrismProvider({ children }: { children: ReactNode }) {
       reportsEndpoint: "GET /api/reports",
       incidentsEndpoint: "GET /api/incidents",
       resourcesEndpoint: "GET /api/resources",
-      wsEndpoint: "WS /ws/live",
+      wsEndpoint: "WS /api/simulation/ws/live",
     },
-  }), [selectedWardCode, selectedIncidentId, mapMode, simulationState, reports, sources, activity, plan, planReady, planPhase, incidents, movingAssets, prismResources, selectedResourceId, resourceTrails, selectedResource]);
+  }), [selectedWardCode, selectedIncidentId, mapMode, simulationState, reports, sources, activity, plan, planReady, planPhase, incidents, movingAssets, prismResources, selectedResourceId, resourceTrails, selectedResource, resources]);
 
   return <PrismContext.Provider value={value}>{children}</PrismContext.Provider>;
 }
