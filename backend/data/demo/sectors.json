@@ -5,3 +5,4 @@
   {"id":"S04","name":"Maligaon","latitude":26.1325,"longitude":91.7255,"population":22000,"vulnerable_population":2800,"status":"at_risk","risk_score":58,"priority":72,"confidence":68,"information_void_score":15},
   {"id":"S09","name":"Six Mile","latitude":26.1515,"longitude":91.7425,"population":11000,"vulnerable_population":1300,"status":"information_void","risk_score":40,"priority":50,"confidence":20,"information_void_score":85}
 ]
+     

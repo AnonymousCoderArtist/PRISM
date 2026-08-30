@@ -91,6 +91,7 @@ Interactive docs: `http://localhost:8000/docs`.
 - `GET /api/intelligence/confidence`
 - `GET /api/intelligence/weather/{lat}/{lon}`
 - `POST /api/intelligence/resources/plan`
+- `POST /api/intelligence/query`
 - `POST /api/simulation/start`
 - `POST /api/simulation/pause`
 - `POST /api/simulation/reset`

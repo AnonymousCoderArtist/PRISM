@@ -787,6 +787,34 @@ POST /api/intelligence/silence
 GET  /api/intelligence/confidence
 GET  /api/intelligence/weather/{lat}/{lon}
 POST /api/intelligence/resources/plan
+POST /api/intelligence/query
+```
+
+## Voice Assistant
+
+``` http
+POST /api/intelligence/query
+```
+
+Request body:
+``` json
+{
+  "query": "What is the status of Bhangagarh?",
+  "conversation_id": "optional"
+}
+```
+
+Response body:
+``` json
+{
+  "query": "What is the status of Bhangagarh?",
+  "response": {
+    "answer": "Bhangagarh has critical flooding...",
+    "focus_lat": 26.1495,
+    "focus_lng": 91.7655,
+    "area_id": "S03"
+  }
+}
 ```
 
 ## Resources
