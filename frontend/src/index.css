@@ -196,6 +196,18 @@ html, body {
 .hud-crosshair::before { left: 50%; top: 0; bottom: 0; width: 1px; transform: translateX(-0.5px); }
 .hud-crosshair::after { top: 50%; left: 0; right: 0; height: 1px; transform: translateY(-0.5px); }
 
+/* Emergency red mode */
+.emergency-active .prism-app { animation: emergencyShake 0.28s ease-in-out infinite alternate; }
+.emergency-active .prism-map { box-shadow: inset 0 0 120px rgba(255, 20, 20, 0.42), 0 0 0 1px rgba(255,77,77,0.28); }
+.emergency-active .panel { border-color: rgba(255,77,77,0.22); }
+.emergency-active .panel::before { border-top-color: rgba(255,77,77,0.85) !important; border-left-color: rgba(255,77,77,0.85) !important; }
+.emergency-active .prism-header { border-top-color: rgba(255,77,77,0.85) !important; background: linear-gradient(90deg,#1a0606,#0A0F0F) !important; }
+.emergency-tint { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(800px 400px at 50% 0%, rgba(255,77,77,0.16), transparent 68%); z-index: 2; mix-blend-mode: screen; }
+.emergency-pulse { position: absolute; inset: -2px; pointer-events: none; border: 1px solid rgba(255,77,77,0.32); border-radius: 6px; animation: emergencyPulse 1.1s ease-out infinite; z-index: 1; }
+@keyframes emergencyShake { 0% { transform: translateX(-0.4px); } 100% { transform: translateX(0.4px); } }
+@keyframes emergencyPulse { 0% { opacity: 0.9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.03); } }
+@keyframes emergencyFlash { 0%,100% { opacity: 1; } 50% { opacity: 0.22; } }
+
 /* Buttons subtle */
 button:active { transform: translateY(0.5px); }
 
