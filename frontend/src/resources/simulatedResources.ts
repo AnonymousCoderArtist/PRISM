@@ -56,26 +56,26 @@ type DispatchDef = {
  *  All 12 resources are dispatched one by one (staggered) after the plan is ready. */
 const DISPATCHES: DispatchDef[] = [
   // 4 BOATS — distinct river stations
-  { id: "BOAT-174", kind: "boat", speed: 22, mission: "Flood rescue — Brahmaputra",   base: BASES.PANDU_GHAT,    target: INCIDENTS.DISPUR,      altTarget: INCIDENTS.MALIGAON },
-  { id: "BOAT-181", kind: "boat", speed: 14, mission: "Evacuation — Pandu waters",    base: BASES.FATAZIL_GHAT,  target: INCIDENTS.PALTAN_BZR,  altTarget: INCIDENTS.GANESHGURI },
-  { id: "BOAT-192", kind: "boat", speed: 18, mission: "Rescue — upper river",         base: BASES.GUWAHATI_PORT, target: INCIDENTS.SIX_MILE,    altTarget: INCIDENTS.PALTAN_BZR },
-  { id: "BOAT-205", kind: "boat", speed: 26, mission: "Supply — Noonmati refinery",   base: BASES.JALUKBARI,     target: INCIDENTS.NOONMATI,    altTarget: INCIDENTS.LOKHRA },
+  { id: "BOAT-174", kind: "boat", speed: 45, mission: "Flood rescue — Brahmaputra",   base: BASES.PANDU_GHAT,    target: INCIDENTS.DISPUR,      altTarget: INCIDENTS.MALIGAON },
+  { id: "BOAT-181", kind: "boat", speed: 32, mission: "Evacuation — Pandu waters",    base: BASES.FATAZIL_GHAT,  target: INCIDENTS.PALTAN_BZR,  altTarget: INCIDENTS.GANESHGURI },
+  { id: "BOAT-192", kind: "boat", speed: 38, mission: "Rescue — upper river",         base: BASES.GUWAHATI_PORT, target: INCIDENTS.SIX_MILE,    altTarget: INCIDENTS.PALTAN_BZR },
+  { id: "BOAT-205", kind: "boat", speed: 52, mission: "Supply — Noonmati refinery",   base: BASES.JALUKBARI,     target: INCIDENTS.NOONMATI,    altTarget: INCIDENTS.LOKHRA },
 
   // 3 AMBULANCES — distinct hospitals
-  { id: "AMB-021",  kind: "ambulance", speed: 34, mission: "Medical — Paltan Bazaar",    base: BASES.GMCH_HOSPITAL, target: INCIDENTS.PALTAN_BZR,  altTarget: INCIDENTS.BHANGAGARH },
-  { id: "AMB-014",  kind: "ambulance", speed: 18, mission: "Medical — Maligaon",         base: BASES.DISPUR_HOSP,   target: INCIDENTS.MALIGAON,    altTarget: INCIDENTS.LOKHRA },
-  { id: "AMB-033",  kind: "ambulance", speed: 28, mission: "Medical — Khanapara",         base: BASES.PANBAZAR_FIRE, target: INCIDENTS.KHANAPARA,   altTarget: INCIDENTS.SIX_MILE },
+  { id: "AMB-021",  kind: "ambulance", speed: 72, mission: "Medical — Paltan Bazaar",    base: BASES.GMCH_HOSPITAL, target: INCIDENTS.PALTAN_BZR,  altTarget: INCIDENTS.BHANGAGARH },
+  { id: "AMB-014",  kind: "ambulance", speed: 42, mission: "Medical — Maligaon",         base: BASES.DISPUR_HOSP,   target: INCIDENTS.MALIGAON,    altTarget: INCIDENTS.LOKHRA },
+  { id: "AMB-033",  kind: "ambulance", speed: 58, mission: "Medical — Khanapara",         base: BASES.PANBAZAR_FIRE, target: INCIDENTS.KHANAPARA,   altTarget: INCIDENTS.SIX_MILE },
 
   // 2 HELICOPTERS — distinct airbases
-  { id: "AIR-007",  kind: "helicopter", speed: 145, mission: "Aerial — Six Mile",         base: BASES.BORJHAR,       target: INCIDENTS.SIX_MILE,    altTarget: INCIDENTS.BHANGAGARH },
-  { id: "AIR-011",  kind: "helicopter", speed: 162, mission: "Aerial — Chandmari",        base: BASES.AZARA,         target: INCIDENTS.CHANDMARI,   altTarget: INCIDENTS.DISPUR },
+  { id: "AIR-007",  kind: "helicopter", speed: 280, mission: "Aerial — Six Mile",         base: BASES.BORJHAR,       target: INCIDENTS.SIX_MILE,    altTarget: INCIDENTS.BHANGAGARH },
+  { id: "AIR-011",  kind: "helicopter", speed: 320, mission: "Aerial — Chandmari",        base: BASES.AZARA,         target: INCIDENTS.CHANDMARI,   altTarget: INCIDENTS.DISPUR },
 
   // 2 RESCUE VEHICLES — distinct stations
-  { id: "RV-009",   kind: "rescue_vehicle", speed: 28, mission: "Rescue — Fatasil corridor", base: BASES.PANBAZAR_FIRE, target: INCIDENTS.BELTOLA,     altTarget: INCIDENTS.DISPUR },
-  { id: "RV-015",   kind: "rescue_vehicle", speed: 36, mission: "Rescue — Khanapara",        base: BASES.KHANAPARA,     target: INCIDENTS.KHANAPARA,   altTarget: INCIDENTS.JALUKBARI_W },
+  { id: "RV-009",   kind: "rescue_vehicle", speed: 62, mission: "Rescue — Fatasil corridor", base: BASES.PANBAZAR_FIRE, target: INCIDENTS.BELTOLA,     altTarget: INCIDENTS.DISPUR },
+  { id: "RV-015",   kind: "rescue_vehicle", speed: 78, mission: "Rescue — Khanapara",        base: BASES.KHANAPARA,     target: INCIDENTS.KHANAPARA,   altTarget: INCIDENTS.JALUKBARI_W },
 
   // 1 EXCAVATOR — Chandmari station
-  { id: "EXC-002",  kind: "rescue_vehicle", speed: 12, mission: "Clear debris — Bhangagarh", base: BASES.CHANDMARI,    target: INCIDENTS.BHANGAGARH,  altTarget: INCIDENTS.PALTAN_BZR },
+  { id: "EXC-002",  kind: "rescue_vehicle", speed: 28, mission: "Clear debris — Bhangagarh", base: BASES.CHANDMARI,    target: INCIDENTS.BHANGAGARH,  altTarget: INCIDENTS.PALTAN_BZR },
 ];
 
 export const SIMULATED_RESOURCES: PrismResource[] = DISPATCHES.map(d => ({
@@ -97,7 +97,7 @@ export const SIMULATED_RESOURCES: PrismResource[] = DISPATCHES.map(d => ({
   progress: 0, // 0..1 along the current segment
 }));
 
-SIMULATED_RESOURCES.forEach((r, i) => { r.dispatchDelay = i * 1.8; });
+SIMULATED_RESOURCES.forEach((r, i) => { r.dispatchDelay = i * 0.9; });
 
 /**
  * Polyline length (sum of segment lengths) — used to convert km/h + tick duration into
