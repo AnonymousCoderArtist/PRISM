@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -63,7 +63,7 @@ app.include_router(simulation.router)
 app.include_router(intelligence.router)
 
 
-STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "static"
 
 
 @app.get("/")
@@ -73,3 +73,20 @@ def root() -> dict[str, str]:
 
 if STATIC_DIR.is_dir():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+    @app.get("/{full_path:path}")
+    def serve_frontend(request: Request, full_path: str):
+        path = request.url.path
+        for prefix in (
+            "/api",
+            "/docs",
+            "/openapi.json",
+            "/redoc",
+            "/ws",
+        ):
+            if path == prefix or path.startswith(prefix + "/"):
+                return FileResponse(status_code=404)
+        target = STATIC_DIR / full_path
+        if full_path and target.is_file():
+            return FileResponse(target)
+        return FileResponse(STATIC_DIR / "index.html")
