@@ -1,9 +1,9 @@
-import { Clock3, Radio, MapPinned, Play, Pause, RotateCcw } from "lucide-react";
+import { Clock3, Radio, MapPinned, Play, Pause, RotateCcw, Truck } from "lucide-react";
 import { useCurrentTime } from "../hooks/useCurrentTime";
 import { usePrism } from "../store/PrismContext";
 import { PrismLogo } from "./PrismLogo";
 
-export function TopBar() {
+export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void; view?: string }) {
   const now = useCurrentTime();
   const { simulationState, setSimulationState } = usePrism();
 
@@ -14,11 +14,12 @@ export function TopBar() {
       justifyContent: "space-between",
       background: "var(--bg-panel)",
       borderBottom: "1px solid var(--border)",
+      borderTop: "1px solid var(--lime-border)",
       padding: "0 10px 0 14px",
       zIndex: 20,
       position: "relative",
     }}>
-      {/* Left: identity */}
+      {/* Left: Identity */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
         <div style={{ width: 32, height: 32, display: "grid", placeItems: "center", border: "1px solid var(--border)", borderRadius: 3 }}>
           <PrismLogo size={22} />
@@ -29,9 +30,23 @@ export function TopBar() {
             <MapPinned size={10} /> GUWAHATI — ASSAM — INDIA
           </div>
         </div>
+
+        <button
+          onClick={onOpenResources}
+          className="mono"
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 4, cursor: "pointer",
+            background: view === "resources" ? "var(--lime)" : "rgba(204,255,0,0.08)",
+            color: view === "resources" ? "#050607" : "var(--lime)",
+            border: view === "resources" ? "1px solid var(--lime)" : "1px solid var(--lime-border)",
+            fontSize: 10, fontWeight: 800, letterSpacing: "0.1em",
+          }}
+        >
+          <Truck size={12} /> RESOURCES {view === "resources" ? "• OPEN" : ""}
+        </button>
       </div>
 
-      {/* Center: current view */}
+      {/* Center: View */}
       <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.1em", color: "var(--text-muted)" }}>
         <span style={{ color: "var(--text)" }}>GUWAHATI</span>
       </div>

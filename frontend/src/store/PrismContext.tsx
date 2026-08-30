@@ -5,7 +5,6 @@ import { mockIncidents, mockResources, simReportPool, simSourcePool, wardActivit
 import type { PrismResource } from "../resources/resourceTypes";
 import { toPrismResource } from "../resources/resourceTypes";
 import { SIMULATED_RESOURCES, stepSimulatedResources } from "../resources/simulatedResources";
-import { wsUrl } from "../services/api";
 
 type PlanAssignment = {
   id: string;
@@ -66,8 +65,8 @@ export function PrismProvider({ children }: { children: ReactNode }) {
   const [plan, setPlan] = useState<PlanAssignment[]>([]);
   const [planPhase, setPlanPhase] = useState<PrismContextValue["planPhase"]>("idle");
   const [movingAssets, setMovingAssets] = useState<PrismContextValue["movingAssets"]>([]);
-  // Visible from start — simulated fleet shown immediately, backend updates when available
-  const [prismResources, setPrismResources] = useState<PrismResource[]>(() => SIMULATED_RESOURCES.slice());
+  // Start hidden — only appear after SIMULATE → plan ready (user request)
+  const [prismResources, setPrismResources] = useState<PrismResource[]>(() => []);
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
   const [resourceTrails, setResourceTrails] = useState<Map<string, [number, number][]>>(() => new Map());
 
@@ -293,61 +292,6 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(id);
   }, [planPhase]);
 
-  // ---- Backend WebSocket live feed (minimal integration) ----
-  useEffect(() => {
-    if (simulationState !== "running") return;
-    const url = wsUrl();
-    const ws = new WebSocket(url);
-    ws.onopen = () => { /* live feed active */ };
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        const eventType = msg.event;
-        const payload = msg.payload;
-        if (eventType === "REPORT_RECEIVED") {
-          setReports(prev => {
-            const report: Report = {
-              id: `RPT-WS-${Date.now()}`,
-              incidentId: "",
-              wardCode: 0,
-              text: `${payload.source ?? "unknown"} @ ${payload.location ?? "unknown"}`,
-              time: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false }),
-              source: "field",
-              verified: false,
-            };
-            return [report, ...prev].slice(0, 32);
-          });
-        } else if (eventType === "INCIDENT_UPDATED") {
-          setIncidents(prev =>
-            prev.map(inc =>
-              inc.id === payload.incident_id
-                ? { ...inc, status: payload.status === "active" ? "reported" : payload.status === "monitoring" ? "verified" : payload.status === "contained" ? "dispatched" : payload.status === "resolved" ? "resolved" : inc.status }
-                : inc
-            )
-          );
-        } else if (eventType === "RESOURCE_ASSIGNED") {
-          setMovingAssets(prev => [
-            ...prev,
-            {
-              id: `MOV-WS-${payload.resource_id}`,
-              lon: 91.73,
-              lat: 26.14,
-              label: `${payload.resource_id} → ${payload.incident_id}`,
-              kind: "ambulance",
-              progress: 0,
-              trail: [[91.73, 26.14]],
-              etaMin: payload.eta_minutes ?? 10,
-              totalMin: payload.eta_minutes ?? 10,
-            },
-          ]);
-        }
-      } catch { /* ignore malformed WS messages */ }
-    };
-    ws.onclose = () => { /* live feed closed */ };
-    ws.onerror = () => { ws.close(); };
-    return () => { ws.close(); };
-  }, [simulationState]);
-
   useEffect(() => {
     if (simulationState === "idle") {
       reportIdx.current = 0;
@@ -359,13 +303,9 @@ export function PrismProvider({ children }: { children: ReactNode }) {
       setPlan([]);
       setPlanPhase("idle");
       setMovingAssets([]);
-      // Reset fleet to simulated default
-      setPrismResources(SIMULATED_RESOURCES.slice());
-      setResourceTrails(() => {
-        const m = new Map<string, [number, number][]>();
-        for (const r of SIMULATED_RESOURCES) m.set(r.id, [[r.lng, r.lat]]);
-        return m;
-      });
+      // hide fleet until next dispatch — user request: no boats visible before plan
+      setPrismResources([]);
+      setResourceTrails(new Map());
       setSelectedResourceId(null);
       setSelectedWardCode(null);
       setSelectedIncidentId(null);

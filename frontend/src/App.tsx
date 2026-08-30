@@ -11,7 +11,7 @@ import { PrismProvider } from "./store/PrismContext";
 import { usePrism } from "./store/PrismContext";
 import { DotPattern } from "@/components/ui/dot-pattern-1";
 
-function DashboardShell() {
+function DashboardShell({ onOpenResources, view }: { onOpenResources: () => void; view: string }) {
   const { simulationState, planPhase } = usePrism();
   const isEmergency = simulationState === "running" && (planPhase === "connecting" || planPhase === "collecting" || planPhase === "verifying" || planPhase === "optimizing");
   const isReady = planPhase === "ready";
@@ -30,7 +30,7 @@ function DashboardShell() {
   return (
     <div className={`prism-app ${isEmergency ? "emergency-active" : ""} ${isReady ? "dispatch-ready" : ""}`} style={{ position: "relative" }}>
       <DotPattern width={18} height={18} cr={0.9} className="fill-[rgba(204,255,0,0.08)] opacity-40" />
-      <TopBar />
+      <TopBar onOpenResources={onOpenResources} view={view} />
       <LeftPanel />
       <div className="prism-map panel" style={{ borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)" }}>
         <MapView />
@@ -47,7 +47,7 @@ function Shell() {
   if (view === "resources") {
     return (
       <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)" }}>
-        <TopBar />
+        <TopBar onOpenResources={() => setView("dashboard")} view={view} />
         <div style={{ flex: 1, overflowY: "auto", background: "var(--bg)" }}>
           <ResourcesPage onClose={() => setView("dashboard")} embedded={false} />
         </div>
@@ -55,7 +55,7 @@ function Shell() {
     );
   }
 
-  return <DashboardShell />;
+  return <DashboardShell onOpenResources={() => setView("resources")} view={view} />;
 }
 
 export default function App() {
