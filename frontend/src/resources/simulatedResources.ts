@@ -13,7 +13,7 @@ export const SIMULATED_RESOURCES: PrismResource[] = [
   {
     id: "BOAT-174",
     kind: "boat",
-    lat: ADMIN_LAT + 0.0012, lng: ADMIN_LNG + 0.0008, heading: 268,
+    lat: ADMIN_LAT, lng: ADMIN_LNG, heading: 268,
     status: "en_route",
     speed: 22,
     destination: "INC-001",
@@ -24,7 +24,7 @@ export const SIMULATED_RESOURCES: PrismResource[] = [
   {
     id: "BOAT-181",
     kind: "boat",
-    lat: ADMIN_LAT - 0.0006, lng: ADMIN_LNG - 0.0005, heading: 291,
+    lat: ADMIN_LAT, lng: ADMIN_LNG, heading: 291,
     status: "en_route",
     speed: 14,
     destination: "INC-004",
@@ -35,7 +35,7 @@ export const SIMULATED_RESOURCES: PrismResource[] = [
   {
     id: "BOAT-192",
     kind: "boat",
-    lat: ADMIN_LAT + 0.0004, lng: ADMIN_LNG - 0.001, heading: 223,
+    lat: ADMIN_LAT, lng: ADMIN_LNG, heading: 223,
     status: "en_route",
     speed: 18,
     destination: "INC-042 • Pandu South",
@@ -46,7 +46,7 @@ export const SIMULATED_RESOURCES: PrismResource[] = [
   {
     id: "AMB-021",
     kind: "ambulance",
-    lat: ADMIN_LAT + 0.0009, lng: ADMIN_LNG + 0.0011, heading: 51,
+    lat: ADMIN_LAT, lng: ADMIN_LNG, heading: 51,
     status: "en_route",
     speed: 34,
     destination: "INC-002",
@@ -57,7 +57,7 @@ export const SIMULATED_RESOURCES: PrismResource[] = [
   {
     id: "AMB-014",
     kind: "ambulance",
-    lat: ADMIN_LAT - 0.0009, lng: ADMIN_LNG + 0.0006, heading: 268,
+    lat: ADMIN_LAT, lng: ADMIN_LNG, heading: 268,
     status: "en_route",
     speed: 18,
     destination: "INC-001",
@@ -68,7 +68,7 @@ export const SIMULATED_RESOURCES: PrismResource[] = [
   {
     id: "AIR-007",
     kind: "helicopter",
-    lat: ADMIN_LAT + 0.0015, lng: ADMIN_LNG - 0.0007, heading: 291,
+    lat: ADMIN_LAT, lng: ADMIN_LNG, heading: 291,
     status: "en_route",
     speed: 145,
     destination: "INC-004",
@@ -79,7 +79,7 @@ export const SIMULATED_RESOURCES: PrismResource[] = [
   {
     id: "RV-009",
     kind: "rescue_vehicle",
-    lat: ADMIN_LAT - 0.0011, lng: ADMIN_LNG + 0.0014, heading: 223,
+    lat: ADMIN_LAT, lng: ADMIN_LNG, heading: 223,
     status: "en_route",
     speed: 28,
     destination: "INC-003",
