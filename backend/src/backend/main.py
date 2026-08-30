@@ -1,6 +1,10 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from backend.config import DATABASE_URL
 from backend.database import init_db
@@ -21,6 +25,7 @@ from backend.services.seed import seed_database
 async def lifespan(app: FastAPI):
     init_db()
     from backend.database import SessionLocal
+
     db = SessionLocal()
     try:
         seed_database(db)
@@ -36,6 +41,19 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:8080",
+        "*",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(health.router)
 app.include_router(reports.router)
 app.include_router(incidents.router)
@@ -45,6 +63,30 @@ app.include_router(simulation.router)
 app.include_router(intelligence.router)
 
 
+STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "static"
+
+
 @app.get("/")
 def root() -> dict[str, str]:
     return {"status": "ok", "database": DATABASE_URL}
+
+
+if STATIC_DIR.is_dir():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+    @app.get("/{full_path:path}")
+    def serve_frontend(request: Request, full_path: str):
+        path = request.url.path
+        for prefix in (
+            "/api",
+            "/docs",
+            "/openapi.json",
+            "/redoc",
+            "/ws",
+        ):
+            if path == prefix or path.startswith(prefix + "/"):
+                return FileResponse(status_code=404)
+        target = STATIC_DIR / full_path
+        if full_path and target.is_file():
+            return FileResponse(target)
+        return FileResponse(STATIC_DIR / "index.html")

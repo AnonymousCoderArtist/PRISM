@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -13,7 +15,7 @@ from backend.services.ai_adapter import get_adapter, AIAdapterError
 from backend.services.confidence import compute_confidence
 from backend.services.priority import compute_priority
 from backend.services.information_void import compute_information_void
-from backend.services.weather_risk import compute_weather_risk
+from backend.services.weather_risk import compute_weather_risk, predict_disaster
 from backend.services.response_plan import generate_response_plan
 
 router = APIRouter(prefix="/api/intelligence", tags=["intelligence"])
@@ -154,6 +156,11 @@ def confidence_for_report(report_id: str, db: Session = Depends(get_db)) -> dict
 @router.get("/weather/{lat}/{lon}")
 def weather(lat: float, lon: float) -> dict[str, Any]:
     return compute_weather_risk(lat, lon)
+
+
+@router.get("/predict/{lat}/{lon}")
+def predict(lat: float, lon: float) -> dict[str, Any]:
+    return predict_disaster(lat, lon)
 
 
 @router.post("/resources/plan")

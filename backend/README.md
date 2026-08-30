@@ -76,6 +76,33 @@ uv run uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 The API is available at `http://localhost:8000`.
 Interactive docs: `http://localhost:8000/docs`.
 
+## CORS
+
+The backend allows requests from the frontend dev servers by default.
+
+Allowed origins during development:
+- `http://localhost:5173`
+- `http://localhost:3000`
+- `http://localhost:8080`
+- `*`
+
+If you need to extend this, edit `backend/src/backend/main.py`.
+
+## Serve the built frontend
+
+1. Build the frontend and copy the output into `backend/static`:
+
+```bash
+cd frontend
+npm run build
+mkdir -p ../backend/static
+cp -r dist/* ../backend/static/
+```
+
+2. Start the backend. In addition to the API, it will serve:
+- static assets under `/static`
+- the frontend `index.html` under `/`
+
 ## Key Endpoints
 
 - `GET /api/health`
