@@ -4,9 +4,9 @@ import { Clock, AlertCircle, Activity } from "lucide-react";
 import { usePrism } from "../store/PrismContext";
 
 export function BottomPanel() {
-  const { activity, selectedWardCode, theme } = usePrism();
-  const accent = theme === "blue" ? "#38bdf8" : "#CCFF00";
-  const accentDim = theme === "blue" ? "rgba(56,189,248,0.18)" : "rgba(204,255,0,0.18)";
+  const { activity, selectedWardCode } = usePrism();
+  const accent = "#CCFF00";
+  const accentDim = "rgba(204,255,0,0.18)";
 
   const isFlat = useMemo(() => {
     if (activity.length < 10) return false;
@@ -44,7 +44,7 @@ export function BottomPanel() {
       backgroundColor: "rgba(5,6,7,0.92)",
       borderColor: "#1B2428",
       textStyle: { color: "#E8ECEB", fontSize: 11, fontFamily: "JetBrains Mono" },
-      axisPointer: { lineStyle: { color: theme === "blue" ? "rgba(56,189,248,0.35)" : "rgba(204,255,0,0.35)" } },
+      axisPointer: { lineStyle: { color: "rgba(204,255,0,0.35)" } },
     },
     series: [
       {
@@ -58,7 +58,7 @@ export function BottomPanel() {
             type: "linear", x: 0, y: 0, x2: 0, y2: 1,
             colorStops: [
               { offset: 0, color: isFlat ? "rgba(168,139,255,0.22)" : accentDim },
-              { offset: 1, color: theme === "blue" ? "rgba(56,189,248,0)" : "rgba(204,255,0,0)" },
+              { offset: 1, color: "rgba(204,255,0,0)" },
             ],
           },
         },
@@ -71,7 +71,7 @@ export function BottomPanel() {
       },
     ],
     animationDuration: 600,
-  }), [activity, xLabels, isFlat, accent, accentDim, theme]);
+  }), [activity, xLabels, isFlat, accent, accentDim]);
 
   return (
     <div className="panel prism-bottom" style={{ borderTop: "1px solid var(--border)", borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)", display: "grid", gridTemplateColumns: "1fr 320px", overflow: "hidden" }}>

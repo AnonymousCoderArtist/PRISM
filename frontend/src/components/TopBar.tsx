@@ -1,11 +1,10 @@
 import { motion } from "framer-motion";
-import { Activity, Clock3, Radio, MapPinned, Play, Pause, RotateCcw, Truck, Palette, Home } from "lucide-react";
+import { Activity, Clock3, Radio, MapPinned, Play, Pause, RotateCcw, Truck, Home } from "lucide-react";
 import { useCurrentTime } from "../hooks/useCurrentTime";
 import { usePrism } from "../store/PrismContext";
 import { PrismLogo } from "./PrismLogo";
 
 export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void; view?: string }) {
-  const { theme, toggleTheme } = usePrism();
   const now = useCurrentTime();
   const { simulationState, setSimulationState } = usePrism();
 
@@ -51,10 +50,6 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
           }}
         >
           <Truck size={12} /> RESOURCES {view === "resources" ? "• OPEN" : ""}
-        </button>
-
-        <button onClick={toggleTheme} title="Toggle blue futuristic theme" className="mono" style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 8px", borderRadius: 4, cursor: "pointer", background: theme === "blue" ? "rgba(56,189,248,0.14)" : "transparent", color: theme === "blue" ? "#38bdf8" : "var(--text-muted)", border: theme === "blue" ? "1px solid rgba(56,189,248,0.32)" : "1px solid var(--border)", fontSize: 9, fontWeight: 700 }}>
-          <Palette size={11} /> {theme === "blue" ? "BLUE" : "LIME"}
         </button>
 
         <button onClick={() => window.scrollTo(0, 0)} title="Admin Home" className="mono" style={{ display: "grid", placeItems: "center", width: 28, height: 28, borderRadius: 4, background: "rgba(204,255,0,0.06)", border: "1px solid var(--border)", color: "var(--lime)", cursor: "pointer" }}>

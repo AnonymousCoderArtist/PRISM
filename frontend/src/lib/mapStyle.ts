@@ -21,14 +21,6 @@ export const WARD_FILL = {
   selectedStroke: "#CCFF00",
 };
 
-export const WARD_FILL_BLUE = {
-  base: "rgba(56,189,248,0.07)",
-  hover: "rgba(56,189,248,0.18)",
-  selected: "rgba(56,189,248,0.28)",
-  stroke: "rgba(56,189,248,0.55)",
-  selectedStroke: "#38bdf8",
-};
-
 export const WARD_LINE_WIDTH = {
   base: 0.85,
   selected: 1.6,

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { DARK_STYLE, GUWAHATI_CAMERA, WARD_FILL, WARD_FILL_BLUE } from "../lib/mapStyle";
+import { DARK_STYLE, GUWAHATI_CAMERA, WARD_FILL } from "../lib/mapStyle";
 import { usePrism } from "../store/PrismContext";
 import { EmergencyBanner } from "./EmergencyBanner";
 
@@ -17,9 +17,9 @@ export function MapView() {
   const [error, setError] = useState<string | null>(null);
   const [hoverWard, setHoverWard] = useState<{ code: string; name: string; area: string } | null>(null);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
-  const [hoverAsset, setHoverAsset] = useState<{ id: string; label: string; kind: string; eta: number; x: number; y: number } | null>(null);
-  const { selectedWardCode, selectWard, selectIncident, incidents, movingAssets, simulationState, planPhase, theme } = usePrism();
-  const FILL = theme === "blue" ? WARD_FILL_BLUE : WARD_FILL;
+  const [hoverAsset, setHoverAsset] = useState<{ id: string; label: string; kind: string; eta: number; x: number; y: number; lon: number; lat: number; progress: number } | null>(null);
+  const { selectedWardCode, selectWard, selectIncident, incidents, movingAssets, simulationState, planPhase } = usePrism();
+  const FILL = WARD_FILL;
   const isEmergency = simulationState === "running" && (planPhase === "connecting" || planPhase === "collecting" || planPhase === "verifying" || planPhase === "optimizing");
   const isDispatched = planPhase === "ready";
 
@@ -271,16 +271,16 @@ export function MapView() {
         } as unknown as never;
         map.addSource("moving-trails", { type: "geojson", data: trailsGeo });
 
-        // trail line (behind vehicles)
+        // trail line (covered path) — curved, visible behind vehicles with gradient feel
         map.addLayer({
           id: "moving-trail",
           type: "line",
           source: "moving-trails",
           paint: {
-            "line-color": ["match", ["get", "kind"], "ambulance", "#FF3B30", "helicopter", "#48D8FF", "#8A9698"],
-            "line-width": ["match", ["get", "kind"], "ambulance", 3.2, "helicopter", 2.6, 2],
-            "line-opacity": 0.88,
-            "line-blur": 0.2,
+            "line-color": ["match", ["get", "kind"], "ambulance", "#FF3B30", "helicopter", "#2dd4ff", "#8A9698"],
+            "line-width": ["match", ["get", "kind"], "ambulance", 4.2, "helicopter", 3.4, 2.5],
+            "line-opacity": 0.92,
+            "line-blur": 0.18,
           },
           layout: { "line-cap": "round", "line-join": "round" } as never,
         });
@@ -289,10 +289,23 @@ export function MapView() {
           type: "line",
           source: "moving-trails",
           paint: {
-            "line-color": ["match", ["get", "kind"], "ambulance", "#FF6B6B", "helicopter", "#7DD8FF", "#8A9698"],
-            "line-width": 7,
-            "line-opacity": 0.18,
-            "line-blur": 1.2,
+            "line-color": ["match", ["get", "kind"], "ambulance", "#FF8A8A", "helicopter", "#7DDDFF", "#8A9698"],
+            "line-width": 10,
+            "line-opacity": 0.22,
+            "line-blur": 1.6,
+          },
+        });
+        // remaining dashed path (to show what's left)
+        map.addSource("moving-remaining", { type: "geojson", data: { type: "FeatureCollection", features: [] } as unknown as never });
+        map.addLayer({
+          id: "moving-remaining",
+          type: "line",
+          source: "moving-remaining",
+          paint: {
+            "line-color": ["match", ["get", "kind"], "ambulance", "rgba(255,59,48,0.42)", "helicopter", "rgba(45,212,255,0.42)", "rgba(138,150,152,0.4)"],
+            "line-width": 2.2,
+            "line-opacity": 0.65,
+            "line-dasharray": [1.2, 1.4],
           },
         });
 
@@ -301,10 +314,10 @@ export function MapView() {
           type: "circle",
           source: "moving-assets",
           paint: {
-            "circle-radius": 16,
-            "circle-color": ["match", ["get", "kind"], "ambulance", "#FF4D4D", "helicopter", "#48D8FF", "#8A9698"],
-            "circle-opacity": 0.18,
-            "circle-blur": 0.6,
+            "circle-radius": 20,
+            "circle-color": ["match", ["get", "kind"], "ambulance", "#FF4D4D", "helicopter", "#22d3ee", "#8A9698"],
+            "circle-opacity": 0.22,
+            "circle-blur": 0.65,
           },
         });
         map.addLayer({
@@ -312,10 +325,11 @@ export function MapView() {
           type: "circle",
           source: "moving-assets",
           paint: {
-            "circle-radius": 6.5,
-            "circle-color": ["match", ["get", "kind"], "ambulance", "#FF4D4D", "helicopter", "#48D8FF", "#8A9698"],
-            "circle-stroke-color": "#E8ECEB",
-            "circle-stroke-width": 1.6,
+            "circle-radius": 8.5,
+            "circle-color": ["match", ["get", "kind"], "ambulance", "#FF3B30", "helicopter", "#06b6d4", "#8A9698"],
+            "circle-stroke-color": "#ffffff",
+            "circle-stroke-width": 1.8,
+            "circle-opacity": 1,
           },
         });
         map.addLayer({
@@ -385,13 +399,16 @@ export function MapView() {
           }
         });
 
-        // Hover over ambulance/heli → show ETA
+        // Hover over ambulance/heli → show ETA + location + progress
         map.on("mousemove", "moving-circle", (e: maplibregl.MapLayerMouseEvent) => {
           if (!e.features?.[0]) return;
           const p = e.features[0].properties as { id: string; label: string; kind: string; eta?: number };
           const asset = movingRef.current.find(a => a.id === p.id);
           const eta = asset?.etaMin ?? p.eta ?? 0;
-          setHoverAsset({ id: p.id, label: p.label, kind: p.kind, eta, x: e.point.x, y: e.point.y });
+          const lon = asset?.lon ?? 0;
+          const lat = asset?.lat ?? 0;
+          const prog = asset?.progress ?? 0;
+          setHoverAsset({ id: p.id, label: p.label, kind: p.kind, eta, x: e.point.x, y: e.point.y, lon, lat, progress: prog });
           map.getCanvas().style.cursor = "pointer";
         });
         map.on("mouseleave", "moving-circle", () => {
@@ -517,7 +534,7 @@ export function MapView() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Theme-aware wards recolor (blue vs lime) + priority overlay
+  // Keep wards colors updated (yellow lime theme only)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded() || !loaded) return;
@@ -527,11 +544,9 @@ export function MapView() {
       map.setPaintProperty("wards-fill-selected", "fill-color", FILL.selected);
       map.setPaintProperty("wards-line", "line-color", FILL.stroke);
       map.setPaintProperty("wards-line-selected", "line-color", FILL.selectedStroke);
-      // priority overlay color follows theme (blue => cyan, lime => amber)
-      const priColor = theme === "blue" ? "#38bdf8" : "#F5B942";
-      if (map.getLayer("wards-priority")) map.setPaintProperty("wards-priority", "fill-color", priColor);
+      if (map.getLayer("wards-priority")) map.setPaintProperty("wards-priority", "fill-color", "#F5B942");
     } catch { /* ignore */ }
-  }, [theme, loaded, FILL]);
+  }, [loaded, FILL]);
 
   // Priority order on map: after verification, highlight wards with incidents
   useEffect(() => {
@@ -579,7 +594,7 @@ export function MapView() {
     src.setData(fc as never);
   }, [incidents, loaded]);
 
-  // Keep moving assets in sync — ambulance/helicopter simulation after plan + trails + ETA
+  // Keep moving assets in sync — ambulance/helicopter simulation after plan + trails + ETA + remaining
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded() || !loaded) return;
@@ -606,7 +621,37 @@ export function MapView() {
       } as unknown as never;
       trailSrc.setData(trails as never);
     }
-    // keep ref fresh for hover
+    // remaining dashed path (curved) to show what's left
+    const remSrc = map.getSource("moving-remaining") as maplibregl.GeoJSONSource | undefined;
+    if (remSrc) {
+      const makeRemaining = (m: (typeof movingAssets)[number]) => {
+        const route: Record<string, { s: [number, number]; e: [number, number] }> = {
+          "AMB-01": { s: [91.71, 26.135], e: [91.6367, 26.1395] },
+          "AMB-02": { s: [91.74, 26.128], e: [91.720, 26.108] },
+          "HELI-01": { s: [91.68, 26.145], e: [91.685, 26.168] },
+        };
+        const r = route[m.id] ?? { s: [91.71, 26.135] as [number, number], e: [91.6367, 26.1395] as [number, number] };
+        const pts: [number, number][] = [];
+        const steps = 18;
+        for (let i = 0; i <= steps; i++) {
+          const t = m.progress + ((1 - m.progress) * i) / steps;
+          if (t > 1) break;
+          const lon = r.s[0] + (r.e[0] - r.s[0]) * t;
+          const lat = r.s[1] + (r.e[1] - r.s[1]) * t + Math.sin(t * Math.PI) * 0.0055;
+          pts.push([lon, lat]);
+        }
+        return pts;
+      };
+      const remaining = {
+        type: "FeatureCollection",
+        features: movingAssets.map(m => ({
+          type: "Feature",
+          geometry: { type: "LineString", coordinates: makeRemaining(m) },
+          properties: { id: m.id, kind: m.kind },
+        })),
+      } as unknown as never;
+      remSrc.setData(remaining as never);
+    }
     movingRef.current = movingAssets;
   }, [movingAssets, loaded]);
 
@@ -727,18 +772,28 @@ export function MapView() {
             position: "absolute",
             left: Math.min(hoverAsset.x + 14, 520),
             top: Math.min(hoverAsset.y + 14, 420),
-            background: hoverAsset.kind === "ambulance" ? "rgba(28,8,8,0.96)" : "rgba(8,18,28,0.96)",
-            border: hoverAsset.kind === "ambulance" ? "1px solid rgba(255,77,77,0.65)" : "1px solid rgba(72,216,255,0.65)",
-            borderRadius: 4, padding: "6px 8px", pointerEvents: "none", zIndex: 6,
-            boxShadow: hoverAsset.kind === "ambulance" ? "0 8px 24px rgba(255,77,77,0.35)" : "0 8px 24px rgba(72,216,255,0.35)",
+            background: hoverAsset.kind === "ambulance" ? "rgba(28,8,8,0.98)" : "rgba(8,18,28,0.98)",
+            border: hoverAsset.kind === "ambulance" ? "1px solid rgba(255,77,77,0.72)" : "1px solid rgba(56,189,248,0.72)",
+            borderRadius: 4, padding: "7px 9px", pointerEvents: "none", zIndex: 6, minWidth: 210,
+            boxShadow: hoverAsset.kind === "ambulance" ? "0 10px 28px rgba(255,77,77,0.42)" : "0 10px 28px rgba(56,189,248,0.42)",
           }}>
-            <div className="mono" style={{ fontSize: 9, fontWeight: 800, color: hoverAsset.kind === "ambulance" ? "#FF6B6B" : "#48D8FF", letterSpacing: "0.06em" }}>
+            <div className="mono" style={{ fontSize: 9, fontWeight: 800, color: hoverAsset.kind === "ambulance" ? "#FF6B6B" : "#38bdf8", letterSpacing: "0.06em" }}>
               {hoverAsset.kind === "ambulance" ? "🚑" : "🚁"} {hoverAsset.label} — ETA {hoverAsset.eta} MIN
             </div>
-            <div className="mono" style={{ fontSize: 8, color: "#E8ECEB", marginTop: 2 }}>
-              {hoverAsset.kind === "ambulance" ? "Ground • 30-40 km/h • trail behind" : "Air • 120 km/h • direct"} • slow realistic
+            <div className="mono" style={{ fontSize: 8, color: "#E8ECEB", marginTop: 3, display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <span>📍 {hoverAsset.lat.toFixed(4)}°N {hoverAsset.lon.toFixed(4)}°E</span>
+              <span style={{ opacity: 0.35 }}>•</span>
+              <span>{Math.round(hoverAsset.progress * 100)}% covered</span>
+              <span style={{ opacity: 0.35 }}>•</span>
+              <span style={{ color: hoverAsset.kind === "ambulance" ? "#FF8A8A" : "#7DDDFF" }}>{100 - Math.round(hoverAsset.progress * 100)}% left</span>
             </div>
-            <div className="mono" style={{ fontSize: 8, color: "var(--text-faint)", marginTop: 2 }}>Hover keeps updating • click to fly to asset</div>
+            <div style={{ height: 3, background: "rgba(255,255,255,0.12)", borderRadius: 999, overflow: "hidden", marginTop: 5 }}>
+              <div style={{ width: `${Math.round(hoverAsset.progress * 100)}%`, height: "100%", background: hoverAsset.kind === "ambulance" ? "#FF3B30" : "#06b6d4", transition: "width 0.12s linear" }} />
+            </div>
+            <div className="mono" style={{ fontSize: 7, color: "var(--text-faint)", marginTop: 4, display: "flex", justifyContent: "space-between" }}>
+              <span>0% HQ</span><span>— curved top trail —</span><span>100% Ward</span>
+            </div>
+            <div className="mono" style={{ fontSize: 7, color: "var(--text-faint)", marginTop: 3 }}>{hoverAsset.kind === "ambulance" ? "Ground 32 km/h • straight-ish line for viz" : "Air 110 km/h • curved top arc"} • hover for live ETA • click to follow</div>
           </div>
         )}
       </div>
