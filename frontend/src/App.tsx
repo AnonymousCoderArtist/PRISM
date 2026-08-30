@@ -4,6 +4,7 @@ import { TopBar } from "./components/TopBar";
 import { LeftPanel } from "./components/LeftPanel";
 import { RightPanel } from "./components/RightPanel";
 import { BottomPanel } from "./components/BottomPanel";
+import { WeatherPanel } from "./components/WeatherPanel";
 import { MapView } from "./components/MapView";
 import { ResourcesPage } from "./components/ResourcesPage";
 import { PrismProvider } from "./store/PrismContext";
@@ -36,6 +37,7 @@ function DashboardShell({ onOpenResources, view }: { onOpenResources: () => void
         <MapView />
       </div>
       <RightPanel />
+      <WeatherPanel />
       <BottomPanel />
     </div>
   );

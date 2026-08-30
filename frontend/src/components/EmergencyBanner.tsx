@@ -24,7 +24,7 @@ export function EmergencyBanner() {
       <motion.span animate={{ opacity: [1, 0.35, 1] }} transition={{ duration: 0.6, repeat: Infinity }} style={{ width: 8, height: 8, borderRadius: 999, background: "#fff", boxShadow: "0 0 10px #fff" }} />
       <Siren size={14} style={{ color: "#fff" }} />
       <span className="mono" style={{ fontSize: 11, letterSpacing: "0.18em", fontWeight: 800, color: "#fff" }}>
-        EMERGENCY — EMERGENCY — GUWAHATI FLOOD RESPONSE ACTIVE
+        EMERGENCY — EMERGENCY — DISASTER RESPONSE ACTIVE
       </span>
       <AlertTriangle size={14} style={{ color: "#fff" }} />
       <span className="mono" style={{ fontSize: 9, letterSpacing: "0.12em", color: "rgba(255,255,255,0.92)", background: "rgba(0,0,0,0.22)", padding: "2px 7px", borderRadius: 2, display: "inline-flex", alignItems: "center", gap: 6 }}>
