@@ -1,10 +1,10 @@
 import { createContext, useContext, useState, useMemo, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
-import type { AppViewState, Report, Source, Incident, Resource } from "../types/prism";
+import type { AppViewState, Report, Source, Incident, Resource, WardProperties } from "../types/prism";
 import { mockIncidents, mockResources, mockReports, simReportPool, simSourcePool, wardActivity, globalActivity } from "../data/mock";
 import type { PrismResource } from "../resources/resourceTypes";
 import { SIMULATED_RESOURCES, stepSimulatedResources } from "../resources/simulatedResources";
-import { fetchIncidents, fetchReports, fetchPrismResources, fetchAreas, wsUrl } from "../services/api";
+import { fetchIncidents, fetchReports, fetchResources, fetchPrismResources, wsUrl } from "../services/api";
 
 type PlanAssignment = {
   id: string;
@@ -61,7 +61,6 @@ export function PrismProvider({ children }: { children: ReactNode }) {
   const [sources, setSources] = useState<Source[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
-  const [areas, setAreas] = useState<WardProperties[]>([]);
   const [activity, setActivity] = useState<number[]>(globalActivity);
   const [plan, setPlan] = useState<PlanAssignment[]>([]);
   const [planPhase, setPlanPhase] = useState<PrismContextValue["planPhase"]>("idle");
@@ -73,21 +72,6 @@ export function PrismProvider({ children }: { children: ReactNode }) {
   const reportIdx = useRef(0);
   const sourceIdx = useRef(0);
   const simCounter = useRef(0);
-
-  // ---- Load areas on mount ----
-  useEffect(() => {
-    let cancelled = false;
-    fetchAreas()
-      .then(data => {
-        if (!cancelled) setAreas(data);
-      })
-      .catch(() => {
-        // areas remain empty if fetch fails
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // ---- Load initial data when simulation starts (API first, mock fallback) ----
   useEffect(() => {
