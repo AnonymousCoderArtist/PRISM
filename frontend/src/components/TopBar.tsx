@@ -1,23 +1,12 @@
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Activity, Clock3, Radio, MapPinned, Play, Pause, RotateCcw, Truck, Home, CloudRain } from "lucide-react";
+import { Activity, Clock3, Radio, MapPinned, Play, Pause, RotateCcw, Truck, Home, Route } from "lucide-react";
 import { useCurrentTime } from "../hooks/useCurrentTime";
 import { usePrism } from "../store/PrismContext";
 import { PrismLogo } from "./PrismLogo";
-import { fetchPrediction } from "../services/api";
 
 export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void; view?: string }) {
   const now = useCurrentTime();
   const { simulationState, setSimulationState } = usePrism();
-  const [weather, setWeather] = useState<string>("--");
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchPrediction(26.1445, 91.7362).then(d => {
-      if (!cancelled) setWeather(d.prediction.disaster_type === "none" ? (d.weather.weather_condition as string) : `${d.prediction.disaster_type} • ${d.weather.weather_condition}`);
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, []);
 
   return (
     <header className="prism-header" style={{
@@ -81,33 +70,7 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
             <span style={{ width: 6, height: 6, borderRadius: 999, background: "var(--lime)", boxShadow: "0 0 8px rgba(204,255,0,0.7)", animation: "pulse 1.6s infinite" }} />
             SIM
           </span>
-          {simulationState === "running" ? (
-            <span title="Live AI inference consuming tokens" style={{
-              fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.12em",
-              color: "var(--paper)", background: "var(--green)", border: "1px solid var(--green)",
-              padding: "3px 7px", borderRadius: 2, display: "inline-flex", alignItems: "center", gap: 6,
-            }}>
-              <span style={{ width: 6, height: 6, borderRadius: 999, background: "var(--paper)" }} />
-              AI LIVE
-            </span>
-          ) : (
-            <span title="Precomputed AI results, zero tokens consumed" style={{
-              fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.12em",
-              color: "var(--ink)", background: "var(--bg-elevated)", border: "1px solid var(--ink)",
-              padding: "3px 7px", borderRadius: 2, display: "inline-flex", alignItems: "center", gap: 6,
-            }}>
-              <span style={{ width: 6, height: 6, borderRadius: 999, background: "var(--ink)" }} />
-              AI PRECOMPUTED
-            </span>
-          )}
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.1em", color: "var(--text-muted)" }}>WARDS: 60 • LOCAL-FIRST</span>
-          <span title="Guwahati forecast" style={{
-            fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.10em",
-            color: "var(--text-dim)", background: "var(--bg-elevated)", border: "1px solid var(--border)",
-            padding: "3px 7px", borderRadius: 2, display: "inline-flex", alignItems: "center", gap: 5,
-          }}>
-            <CloudRain size={10} /> {weather}
-          </span>
         </div>
       </div>
 
@@ -171,6 +134,15 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
             <Radio size={12} /> LIVE
           </span>
           <Activity size={14} style={{ color: "var(--green)" }} />
+          <img
+            src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face&auto=format"
+            alt="Operator"
+            className="h-7 w-7 rounded-full object-cover border border-[rgba(204,255,0,0.22)] shadow-[0_2px_8px_rgba(0,0,0,0.5),0_0_0_1px_rgba(204,255,0,0.15)]"
+            style={{ objectFit: "cover", width: "28px", height: "28px" }}
+          />
+          <span className="hidden md:inline-flex items-center justify-center h-7 w-7 rounded-full bg-[rgba(204,255,0,0.08)] border border-[rgba(204,255,0,0.18)] shadow-[0_2px_8px_rgba(0,0,0,0.4)]" title="Path data">
+            <Route size={12} style={{ color: "var(--lime)" }} />
+          </span>
         </div>
       </div>
     </header>

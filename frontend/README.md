@@ -1,87 +1,75 @@
-# PRISM Frontend
+# React + TypeScript + Vite
 
-React + TypeScript + Vite command-centre dashboard for PRISM.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Stack
+Currently, two official plugins are available:
 
-- React 19
-- TypeScript
-- Vite
-- MapLibre GL JS + PMTiles
-- Framer Motion
-- Lucide icons
-- ECharts (optional)
-- Tailwind CSS
-- Three.js (resource visualisation)
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-## Run
+## React Compiler
 
-In one terminal start the backend (see `../backend/README.md`):
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-```bash
-cd backend
-uv run uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
-```
+## Expanding the ESLint configuration
 
-In another terminal:
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-Open <http://localhost:5173>.
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
 
-The Vite dev server proxies `/api/*` and `/api/simulation/ws/*` to `http://localhost:8000`. No CORS setup needed in development.
-
-## Build for production
-
-```bash
-npm run build
-```
-
-Output goes to `frontend/dist/`. Copy it into the backend static dir to ship as a single server:
-
-```bash
-mkdir ..\backend\static
-xcopy /E /I /Y dist\* ..\backend\static\
-# macOS / Linux: cp -r dist/* ../backend/static/
-```
-
-Then start only the backend — it serves both the API and the SPA at <http://localhost:8000>.
-
-## Configuration
-
-`frontend/.env.development` and `frontend/.env.production`:
-
-| Variable | Purpose | Default |
-| --- | --- | --- |
-| `VITE_API_URL` | Backend origin. Empty = use Vite proxy | empty |
-
-If `VITE_API_URL` is set (e.g. `http://localhost:8000`), the frontend calls the API directly and opens the WebSocket against that host. If empty, it relies on the Vite dev server proxy and uses `window.location.host` for the WebSocket — this is the recommended setup.
-
-## Project layout
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 
 ```
-frontend/
-├── public/
-│   └── data/guwahati/      Local map data (GeoJSON + PMTiles)
-├── src/
-│   ├── components/         Dashboard panels
-│   │   ├── TopBar.tsx
-│   │   ├── LeftPanel.tsx
-│   │   ├── MapView.tsx
-│   │   ├── RightPanel.tsx
-│   │   ├── BottomPanel.tsx
-│   │   ├── WeatherPanel.tsx
-│   │   ├── EmergencyBanner.tsx
-│   │   ├── PrismLogo.tsx
-│   │   └── ResourcesPage.tsx
-│   ├── store/PrismContext.tsx   Global state (reports, incidents, plan, weather)
-│   ├── services/api.ts          Backend client + WebSocket
-│   ├── lib/mapStyle.ts          Map config + ward fill colours
-│   ├── types/prism.ts
-│   └── index.css                Design tokens (editorial / Swiss-modern)
-└── vite.config.ts
+
+You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+
 ```

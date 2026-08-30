@@ -225,33 +225,3 @@ export async function fetchAreas(signal?: AbortSignal): Promise<WardProperties[]
   const data = (await res.json()) as BackendArea[];
   return data.map(toWard);
 }
-
-export type WeatherPrediction = {
-  weather: {
-    rainfall_next_6h_mm: number;
-    rain_probability: number;
-    weather_condition: string;
-    forecast_risk: number;
-    disaster_predictions: Array<{
-      disaster_type: string;
-      confidence: number;
-      severity: string;
-      reason: string;
-    }>;
-    suspected_disasters: string[];
-  };
-  prediction: {
-    disaster_type: string;
-    confidence: number;
-    severity: string;
-    reason: string;
-  };
-};
-
-export async function fetchPrediction(lat: number, lon: number, signal?: AbortSignal): Promise<WeatherPrediction> {
-  const base = apiBase();
-  const url = base ? `${base}/api/intelligence/predict/${lat}/${lon}` : `/api/intelligence/predict/${lat}/${lon}`;
-  const res = await fetch(url, { signal });
-  if (!res.ok) throw new Error(`Prediction fetch failed: ${res.status}`);
-  return (await res.json()) as WeatherPrediction;
-}
