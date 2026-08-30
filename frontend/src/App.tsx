@@ -10,13 +10,12 @@ import { PrismProvider } from "./store/PrismContext";
 
 import { usePrism } from "./store/PrismContext";
 
-function DashboardShell({ onOpenResources, view, theme, toggleTheme }: { onOpenResources: () => void; view: string; theme: string; toggleTheme: () => void }) {
+function DashboardShell({ onOpenResources, view }: { onOpenResources: () => void; view: string }) {
   const { simulationState, planPhase } = usePrism();
   const isEmergency = simulationState === "running" && (planPhase === "connecting" || planPhase === "collecting" || planPhase === "verifying" || planPhase === "optimizing");
   const isReady = planPhase === "ready";
 
   useEffect(() => {
-    // gsap wow intro: stagger panels
     const ctx = gsap.context(() => {
       gsap.from(".prism-header", { y: -18, opacity: 0, duration: 0.55, ease: "power3.out" });
       gsap.from(".prism-left", { x: -22, opacity: 0, duration: 0.6, ease: "power3.out", delay: 0.08 });
@@ -29,7 +28,7 @@ function DashboardShell({ onOpenResources, view, theme, toggleTheme }: { onOpenR
 
   return (
     <div className={`prism-app ${isEmergency ? "emergency-active" : ""} ${isReady ? "dispatch-ready" : ""}`} style={{ position: "relative" }}>
-      <TopBar onOpenResources={onOpenResources} view={view} theme={theme} toggleTheme={toggleTheme} />
+      <TopBar onOpenResources={onOpenResources} view={view} />
       <LeftPanel />
       <div className="prism-map panel" style={{ borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)" }}>
         <MapView />
@@ -42,16 +41,11 @@ function DashboardShell({ onOpenResources, view, theme, toggleTheme }: { onOpenR
 
 function Shell() {
   const [view, setView] = useState<"dashboard" | "resources">("dashboard");
-  const [theme, setTheme] = useState<"lime" | "blue">("lime");
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
-  const toggleTheme = () => setTheme(t => (t === "lime" ? "blue" : "lime"));
 
   if (view === "resources") {
     return (
       <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)" }}>
-        <TopBar onOpenResources={() => setView("dashboard")} view={view} theme={theme} toggleTheme={toggleTheme} />
+        <TopBar onOpenResources={() => setView("dashboard")} view={view} />
         <div style={{ flex: 1, overflowY: "auto", background: "var(--bg)" }}>
           <ResourcesPage onClose={() => setView("dashboard")} embedded={false} />
         </div>
@@ -59,7 +53,7 @@ function Shell() {
     );
   }
 
-  return <DashboardShell onOpenResources={() => setView("resources")} view={view} theme={theme} toggleTheme={toggleTheme} />;
+  return <DashboardShell onOpenResources={() => setView("resources")} view={view} />;
 }
 
 export default function App() {

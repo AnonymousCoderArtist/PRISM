@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { DARK_STYLE, GUWAHATI_CAMERA, WARD_FILL } from "../lib/mapStyle";
+import { DARK_STYLE, GUWAHATI_CAMERA, WARD_FILL, WARD_FILL_BLUE } from "../lib/mapStyle";
 import { usePrism } from "../store/PrismContext";
 import { EmergencyBanner } from "./EmergencyBanner";
 
@@ -18,7 +18,8 @@ export function MapView() {
   const [hoverWard, setHoverWard] = useState<{ code: string; name: string; area: string } | null>(null);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const [hoverAsset, setHoverAsset] = useState<{ id: string; label: string; kind: string; eta: number; x: number; y: number } | null>(null);
-  const { selectedWardCode, selectWard, selectIncident, incidents, movingAssets, simulationState, planPhase } = usePrism();
+  const { selectedWardCode, selectWard, selectIncident, incidents, movingAssets, simulationState, planPhase, theme } = usePrism();
+  const FILL = theme === "blue" ? WARD_FILL_BLUE : WARD_FILL;
   const isEmergency = simulationState === "running" && (planPhase === "connecting" || planPhase === "collecting" || planPhase === "verifying" || planPhase === "optimizing");
   const isDispatched = planPhase === "ready";
 
@@ -72,13 +73,13 @@ export function MapView() {
         // Add source
         map.addSource("wards", { type: "geojson", data: geo });
 
-        // Fill
+        // Fill — theme-aware (lime vs blue)
         map.addLayer({
           id: "wards-fill",
           type: "fill",
           source: "wards",
           paint: {
-            "fill-color": WARD_FILL.base,
+            "fill-color": FILL.base,
             "fill-opacity": 0.85,
           },
         });
@@ -89,7 +90,7 @@ export function MapView() {
           type: "fill",
           source: "wards",
           paint: {
-            "fill-color": WARD_FILL.hover,
+            "fill-color": FILL.hover,
             "fill-opacity": 0.95,
           },
           filter: ["==", ["get", "ward_lgd_code"], -1],
@@ -100,7 +101,7 @@ export function MapView() {
           type: "fill",
           source: "wards",
           paint: {
-            "fill-color": WARD_FILL.selected,
+            "fill-color": FILL.selected,
             "fill-opacity": 0.95,
           },
           filter: ["==", ["get", "ward_lgd_code"], -1],
@@ -112,7 +113,7 @@ export function MapView() {
           type: "line",
           source: "wards",
           paint: {
-            "line-color": WARD_FILL.stroke,
+            "line-color": FILL.stroke,
             "line-width": 0.9,
             "line-opacity": 0.9,
           },
@@ -123,11 +124,23 @@ export function MapView() {
           type: "line",
           source: "wards",
           paint: {
-            "line-color": WARD_FILL.selectedStroke,
+            "line-color": FILL.selectedStroke,
             "line-width": 1.8,
             "line-opacity": 1,
           },
           filter: ["==", ["get", "ward_lgd_code"], -1],
+        });
+
+        // Priority overlay — shows prioritized order after verification (wow)
+        map.addLayer({
+          id: "wards-priority",
+          type: "fill",
+          source: "wards",
+          paint: {
+            "fill-color": "#F5B942",
+            "fill-opacity": 0.0,
+          },
+          filter: ["in", ["get", "ward_lgd_code"], ["literal", []]],
         });
 
         // Add incident markers as GeoJSON source + circle layer — initially empty (verification-gated)
@@ -503,6 +516,38 @@ export function MapView() {
       mapRef.current = null;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Theme-aware wards recolor (blue vs lime) + priority overlay
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded() || !loaded) return;
+    try {
+      map.setPaintProperty("wards-fill", "fill-color", FILL.base);
+      map.setPaintProperty("wards-fill-hover", "fill-color", FILL.hover);
+      map.setPaintProperty("wards-fill-selected", "fill-color", FILL.selected);
+      map.setPaintProperty("wards-line", "line-color", FILL.stroke);
+      map.setPaintProperty("wards-line-selected", "line-color", FILL.selectedStroke);
+      // priority overlay color follows theme (blue => cyan, lime => amber)
+      const priColor = theme === "blue" ? "#38bdf8" : "#F5B942";
+      if (map.getLayer("wards-priority")) map.setPaintProperty("wards-priority", "fill-color", priColor);
+    } catch { /* ignore */ }
+  }, [theme, loaded, FILL]);
+
+  // Priority order on map: after verification, highlight wards with incidents
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded() || !loaded) return;
+    if (!map.getLayer("wards-priority")) return;
+    if (incidents.length === 0 || planPhase === "idle" || planPhase === "connecting") {
+      map.setFilter("wards-priority", ["in", ["get", "ward_lgd_code"], ["literal", []]]);
+      map.setPaintProperty("wards-priority", "fill-opacity", 0);
+      return;
+    }
+    const codes = incidents.map(i => i.wardCode);
+    map.setFilter("wards-priority", ["in", ["get", "ward_lgd_code"], ["literal", codes]]);
+    const op = planPhase === "ready" ? 0.38 : planPhase === "optimizing" ? 0.28 : planPhase === "verifying" ? 0.20 : 0.12;
+    map.setPaintProperty("wards-priority", "fill-opacity", op);
+  }, [incidents, planPhase, loaded]);
 
   // Reflect selectedWardCode to map filters
   useEffect(() => {

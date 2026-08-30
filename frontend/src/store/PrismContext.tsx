@@ -27,6 +27,8 @@ type PrismContextValue = AppViewState & {
   planReady: boolean;
   planPhase: "idle" | "connecting" | "collecting" | "verifying" | "optimizing" | "ready";
   movingAssets: { id: string; lon: number; lat: number; label: string; kind: "ambulance" | "helicopter"; progress: number; trail: [number, number][]; etaMin: number; totalMin: number }[];
+  theme: "lime" | "blue";
+  toggleTheme: () => void;
   api: {
     reportsEndpoint: "GET /api/reports";
     incidentsEndpoint: "GET /api/incidents";
@@ -44,6 +46,10 @@ const FULL_PLAN: PlanAssignment[] = [
 ];
 
 export function PrismProvider({ children }: { children: ReactNode }) {
+  const [theme, setTheme] = useState<"lime" | "blue">("lime");
+  const toggleTheme = () => setTheme(t => (t === "lime" ? "blue" : "lime"));
+  useEffect(() => { document.documentElement.setAttribute("data-theme", theme); }, [theme]);
+
   const [selectedWardCode, setSelectedWardCode] = useState<number | null>(null);
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
   const [mapMode, setMapMode] = useState<AppViewState["mapMode"]>("wards");
@@ -255,13 +261,15 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     planReady,
     planPhase,
     movingAssets,
+    theme,
+    toggleTheme,
     api: {
       reportsEndpoint: "GET /api/reports",
       incidentsEndpoint: "GET /api/incidents",
       resourcesEndpoint: "GET /api/resources",
       wsEndpoint: "WS /ws/live",
     },
-  }), [selectedWardCode, selectedIncidentId, mapMode, simulationState, reports, sources, activity, plan, planReady, planPhase, incidents, movingAssets]);
+  }), [selectedWardCode, selectedIncidentId, mapMode, simulationState, reports, sources, activity, plan, planReady, planPhase, incidents, movingAssets, theme]);
 
   return <PrismContext.Provider value={value}>{children}</PrismContext.Provider>;
 }

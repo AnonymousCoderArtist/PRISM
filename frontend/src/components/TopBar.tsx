@@ -4,7 +4,8 @@ import { useCurrentTime } from "../hooks/useCurrentTime";
 import { usePrism } from "../store/PrismContext";
 import { PrismLogo } from "./PrismLogo";
 
-export function TopBar({ onOpenResources, view, theme, toggleTheme }: { onOpenResources?: () => void; view?: string; theme?: string; toggleTheme?: () => void }) {
+export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void; view?: string }) {
+  const { theme, toggleTheme } = usePrism();
   const now = useCurrentTime();
   const { simulationState, setSimulationState } = usePrism();
 

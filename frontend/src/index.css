@@ -232,6 +232,39 @@ html, body {
 [data-theme="blue"] .hud-scanline { background: linear-gradient(90deg, transparent, rgba(56,189,248,0.42), transparent) !important; }
 [data-theme="blue"] .panel-header { background: linear-gradient(90deg, rgba(56,189,248,0.07), transparent 55%), var(--bg-panel-2) !important; }
 
+/* Hover & gradients polish */
+.panel { transition: border-color 0.28s ease, box-shadow 0.28s ease, transform 0.2s ease; background: linear-gradient(180deg, rgba(17,25,30,0.98), rgba(10,13,15,0.99)); }
+.panel:hover { border-color: color-mix(in srgb, var(--lime) 22%, var(--border)); box-shadow: 0 6px 28px rgba(0,0,0,0.45), 0 0 0 1px var(--lime-dim); transform: translateY(-1px); }
+.panel-header { background: linear-gradient(90deg, color-mix(in srgb, var(--lime) 8%, transparent), transparent 58%), linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel)); }
+button { transition: filter 0.18s ease, transform 0.12s ease, border-color 0.18s ease, background 0.18s ease; }
+button:hover { filter: brightness(1.08); border-color: color-mix(in srgb, var(--lime) 28%, var(--border)) !important; }
+button:active { transform: translateY(0.5px) scale(0.99); }
+.mono { transition: color 0.2s ease; }
+
+/* Blue futuristic theme — full dark blue gradients */
+[data-theme="blue"] {
+  --lime: #38bdf8;
+  --lime-dim: rgba(56,189,248,0.14);
+  --lime-dim2: rgba(56,189,248,0.08);
+  --lime-border: rgba(56,189,248,0.32);
+  --bg: #04080b;
+  --bg-panel: #071118;
+  --bg-panel-2: #0a1a26;
+  --bg-elevated: #0e2233;
+  --border: #143040;
+  --border-strong: #1d4560;
+}
+[data-theme="blue"] #root { background: radial-gradient(1100px 500px at 50% -8%, rgba(56,189,248,0.09), transparent 60%), radial-gradient(860px 460px at 98% 0%, rgba(34,211,238,0.07), transparent 55%), radial-gradient(700px 400px at 0% 100%, rgba(14,165,233,0.05), transparent 62%), var(--bg); }
+[data-theme="blue"] .panel { background: linear-gradient(180deg, rgba(14,34,51,0.96), rgba(7,17,24,0.98)); border-color: #143040; }
+[data-theme="blue"] .panel:hover { border-color: rgba(56,189,248,0.32) !important; box-shadow: 0 8px 32px rgba(56,189,248,0.12), 0 0 0 1px rgba(56,189,248,0.14) !important; }
+[data-theme="blue"] .panel::before { border-top-color: rgba(56,189,248,0.75) !important; border-left-color: rgba(56,189,248,0.75) !important; }
+[data-theme="blue"] .prism-map::before { border-top-color: rgba(56,189,248,0.85) !important; border-left-color: rgba(56,189,248,0.85) !important; }
+[data-theme="blue"] .panel-header { background: linear-gradient(90deg, rgba(56,189,248,0.08), transparent 58%), linear-gradient(180deg, #0a1a26, #071118) !important; }
+[data-theme="blue"] .panel-header::after { background: linear-gradient(90deg, rgba(56,189,248,0.35), transparent 60%) !important; }
+[data-theme="blue"] .hud-grid { background-image: linear-gradient(rgba(56,189,248,0.22) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.22) 1px, transparent 1px) !important; }
+[data-theme="blue"] .hud-scanline { background: linear-gradient(90deg, transparent, rgba(56,189,248,0.42), transparent) !important; }
+[data-theme="blue"] .map-fade-edges::after { box-shadow: inset 0 0 80px rgba(4,22,38,0.65), inset 0 0 1px rgba(56,189,248,0.16) !important; }
+
 /* Buttons subtle */
 button:active { transform: translateY(0.5px); }
 
