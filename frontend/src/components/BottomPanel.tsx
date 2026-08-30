@@ -4,7 +4,7 @@ import { Clock, AlertCircle, Activity } from "lucide-react";
 import { usePrism } from "../store/PrismContext";
 
 export function BottomPanel() {
-  const { activity, selectedWardCode, simulationState } = usePrism();
+  const { activity, selectedWardCode } = usePrism();
 
   const isFlat = useMemo(() => {
     if (activity.length < 10) return false;
@@ -77,8 +77,8 @@ export function BottomPanel() {
       <div style={{ borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div className="panel-header" style={{ background: "var(--bg-panel-2)" }}>
           <span className="panel-title"><Clock size={12} /> ACTIVITY TRACK — {selectedWardCode ? `WARD ${selectedWardCode}` : "GLOBAL"}</span>
-          <span className="mono" style={{ fontSize: 9, display: "inline-flex", alignItems: "center", gap: 6, color: isFlat ? "var(--purple)" : simulationState === "running" ? "var(--lime)" : "var(--text-faint)" }}>
-            {isFlat ? <><AlertCircle size={10} /> SILENCE DETECTED — INFO VOID</> : simulationState === "running" ? <><Activity size={10} /> LIVE STREAMING</> : "IDLE • CLICK A WARD TO FILTER"}
+          <span className="mono" style={{ fontSize: 9, display: "inline-flex", alignItems: "center", gap: 6, color: isFlat ? "var(--purple)" : "var(--lime)" }}>
+            {isFlat ? <><AlertCircle size={10} /> SILENCE DETECTED — INFO VOID</> : <><Activity size={10} /> LIVE MONITORING{selectedWardCode ? ` • WARD ${selectedWardCode}` : " • GLOBAL"}</>}
           </span>
         </div>
         <div style={{ flex: 1, position: "relative", background: "var(--bg-panel)" }}>
@@ -89,7 +89,7 @@ export function BottomPanel() {
             </div>
           )}
           <div className="mono" style={{ position: "absolute", bottom: 4, left: 10, fontSize: 8, color: "var(--text-faint)" }}>
-            X: time (09:00–14:00) • Y: reports / 10 min • Source: {selectedWardCode ? `ward ${selectedWardCode} stream` : "global mock"} • {simulationState === "running" ? "SIM drives continuous graph" : "paused"}
+            X: time (rolling 30) • Y: reports / 10 min • Source: {selectedWardCode ? `ward ${selectedWardCode} stream` : "global mix"} • ongoing heartbeat 2.1s • updates on every ward click
           </div>
         </div>
       </div>

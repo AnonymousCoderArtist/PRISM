@@ -12,7 +12,7 @@ export function MapView() {
   const [phase, setPhase] = useState<"global" | "india" | "assam" | "guwahati">("global");
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hoverWard, setHoverWard] = useState<string | null>(null);
+  const [hoverWard, setHoverWard] = useState<{ code: string; name: string; area: string } | null>(null);
   const { selectedWardCode, selectWard, selectIncident, incidents } = usePrism();
 
   // keep last selected for fly-to incident
@@ -180,8 +180,12 @@ export function MapView() {
           if (!e.features?.[0]) return;
           const props = e.features[0].properties as Record<string, unknown>;
           const code = String(props.ward_lgd_code);
-          if (code !== hoverWard) {
-            setHoverWard(code);
+          const name = String(props.ward_lgd_name ?? `Ward ${code}`);
+          const rawArea = (props as Record<string, unknown>)["st_area(shape)"] as number | undefined;
+          const areaKm = rawArea ? (rawArea / 1_000_000).toFixed(2) + " km²" : "";
+          const wardNameShort = name.replace("Guwahati (M Corp.) - ", "");
+          if (code !== hoverWard?.code) {
+            setHoverWard({ code, name: wardNameShort, area: areaKm });
             map.setFilter("wards-fill-hover", ["==", ["get", "ward_lgd_code"], Number(code)]);
           }
           map.getCanvas().style.cursor = "pointer";
@@ -318,15 +322,19 @@ export function MapView() {
           </span>
         </div>
 
-        {/* Right HUD — ward hover */}
+        {/* Right HUD — ward hover with area */}
         {hoverWard && (
           <div style={{
             position: "absolute", top: 10, right: 10,
-            background: "rgba(5,6,7,0.92)", border: "1px solid var(--lime-border)", borderRadius: 4,
-            padding: "7px 9px",
+            background: "rgba(5,6,7,0.96)", border: "1px solid var(--lime-border)", borderRadius: 4,
+            padding: "7px 9px", minWidth: 168,
+            boxShadow: "0 6px 22px rgba(0,0,0,0.55)",
           }}>
-            <span className="mono" style={{ fontSize: 10, fontWeight: 700, color: "var(--lime)" }}>WARD {hoverWard}</span>
-            <span className="mono" style={{ fontSize: 9, color: "var(--text-muted)", marginLeft: 6 }}>click to inspect</span>
+            <span className="mono" style={{ fontSize: 10, fontWeight: 800, color: "var(--lime)" }}>LGD {hoverWard.code} • {hoverWard.name}</span>
+            <div className="mono" style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 2, display: "flex", gap: 6 }}>
+              <span>{hoverWard.area}</span><span style={{ opacity: 0.3 }}>•</span><span>click to inspect</span>
+            </div>
+            <div className="mono" style={{ fontSize: 8, color: "var(--text-faint)", marginTop: 3 }}>WARD NO {hoverWard.code.replace(/^690/, "") || hoverWard.code} • area derived from shp</div>
           </div>
         )}
       </div>

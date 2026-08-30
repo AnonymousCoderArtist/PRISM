@@ -4,7 +4,7 @@ import { usePrism } from "../store/PrismContext";
 import { mockStats } from "../data/mock";
 
 export function LeftPanel() {
-  const { selectedWardCode, selectWard, incidents, selectedIncidentId, selectIncident, mapMode, setMapMode, simulationState, setSimulationState, resources } = usePrism();
+  const { selectedWardCode, selectWard, incidents, selectedIncidentId, selectIncident, mapMode, setMapMode, simulationState, setSimulationState, plan, planPhase } = usePrism();
   const selectedIncident = incidents.find(i => i.id === selectedIncidentId) ?? null;
 
   return (
@@ -81,7 +81,7 @@ export function LeftPanel() {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", marginTop: 8, borderTop: "1px solid var(--border)", background: "linear-gradient(180deg, rgba(204,255,0,0.04), transparent 22%), var(--bg-panel)" }}>
         <div className="panel-header" style={{ background: "var(--bg-panel-2)" }}>
           <span className="panel-title" style={{ color: "var(--lime)" }}><Truck size={12} /> RESPONSE PLAN <span style={{ color: "var(--text-faint)", fontWeight: 400, letterSpacing: "0.06em", marginLeft: 6 }}>OR-TOOLS • SIM</span></span>
-          <span className="mono" style={{ fontSize: 8, color: "var(--text-faint)" }}>3 ASSIGNMENTS</span>
+          <span className="mono" style={{ fontSize: 8, color: plan.length ? "var(--lime)" : "var(--text-faint)" }}>{plan.length ? `${plan.length} ASSIGNMENTS` : planPhase === "collecting" ? "AWAITING" : planPhase === "optimizing" ? "COMPUTING" : "IDLE"}</span>
         </div>
 
         <div style={{ padding: 8, display: "flex", flexDirection: "column", gap: 7, overflowY: "auto", flex: 1 }}>
@@ -100,20 +100,35 @@ export function LeftPanel() {
             </button>
           </div>
 
-          {/* Assignments */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-            {[
-              { id: "ROUTE-01", to: "MED → Ward 1 (Bharalu)", eta: "12 min • 3.4 km", status: "ASSIGNED", color: "var(--green)", res: resources[0].id },
-              { id: "ROUTE-02", to: "RESCUE → Ward 42 (Pandu)", eta: "18 min • 5.1 km", status: "EN ROUTE", color: "var(--amber)", res: resources[2].id },
-              { id: "ROUTE-03", to: "FOOD → Ward 26 (Fatasil)", eta: "09 min • 2.1 km", status: "STANDBY", color: "var(--text-muted)", res: resources[1].id },
-            ].map(r => (
-              <motion.div key={r.id} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderLeft: `2.5px solid ${r.color}`, borderRadius: 3, padding: "7px 8px" }}>
-                <div className="mono" style={{ fontSize: 8, letterSpacing: "0.1em", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 5 }}><Route size={10} /> {r.id} — {r.status}</div>
-                <div style={{ fontSize: 11, color: "var(--text)", fontWeight: 650, marginTop: 3 }}>{r.to}</div>
-                <div className="mono" style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 1 }}>{r.eta} • {r.res}</div>
-              </motion.div>
-            ))}
-          </div>
+          {/* Assignments — sequential: empty until planReady */}
+          {plan.length === 0 ? (
+            <div style={{ background: "var(--bg-elevated)", border: "1px dashed var(--border)", borderRadius: 3, padding: "12px 10px", textAlign: "center" }}>
+              <div className="mono" style={{ fontSize: 9, letterSpacing: "0.1em", color: planPhase === "collecting" ? "var(--amber)" : planPhase === "optimizing" ? "var(--cyan)" : "var(--text-faint)" }}>
+                {planPhase === "collecting" && "● COLLECTING REPORTS… (plan pending)"}
+                {planPhase === "optimizing" && "◐ OPTIMIZING ROUTES — OR-TOOLS…"}
+                {planPhase === "idle" && "○ IDLE — click SIMULATE to start sequence"}
+                {planPhase === "ready" && "READY"}
+              </div>
+              <div className="mono" style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 4, lineHeight: 1.4 }}>
+                {planPhase === "collecting" && "Reports stream first. Plan generates LAST after ~7 reports."}
+                {planPhase === "optimizing" && "Fusing confidence + priority → computing VRP…"}
+                {planPhase === "idle" && "Sequence: Reports → Sources → Confidence → Plan (LAST)."}
+              </div>
+              <div style={{ height: 4, background: "var(--border)", borderRadius: 999, overflow: "hidden", marginTop: 8 }}>
+                <motion.div style={{ height: "100%", background: planPhase === "optimizing" ? "var(--cyan)" : "var(--amber)" }} initial={{ width: "12%" }} animate={{ width: planPhase === "optimizing" ? "72%" : planPhase === "collecting" ? "42%" : "12%" }} transition={{ duration: 0.8 }} />
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+              {plan.map(r => (
+                <motion.div key={r.id} layout initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.45 }} style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderLeft: `2.5px solid ${r.color}`, borderRadius: 3, padding: "7px 8px" }}>
+                  <div className="mono" style={{ fontSize: 8, letterSpacing: "0.1em", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 5 }}><Route size={10} /> {r.id} — {r.status}</div>
+                  <div style={{ fontSize: 11, color: "var(--text)", fontWeight: 650, marginTop: 3 }}>{r.to}</div>
+                  <div className="mono" style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 1 }}>{r.eta} • {r.resId}</div>
+                </motion.div>
+              ))}
+            </div>
+          )}
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
             <div style={{ background: "rgba(204,255,0,0.06)", border: "1px solid var(--lime-border)", borderRadius: 3, padding: "7px 8px" }}>
