@@ -14,7 +14,7 @@ from backend.models.activity_log import ActivityEvent
 from backend.services.simulation import manager
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 DEMO_DIR = BASE_DIR / "data" / "demo"
 
 

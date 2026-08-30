@@ -1,5 +1,12 @@
 {
-  "name": "Guwahati Flood Scenario",
+  "name": "PRISM Disaster Response Scenario",
+  "disaster_type": "auto",
+  "watch_locations": [
+    {"id": "GUWAHATI-CENTER", "name": "Guwahati, Assam", "latitude": 26.1445, "longitude": 91.7362},
+    {"id": "DISPUR", "name": "Dispur", "latitude": 26.135, "longitude": 91.79},
+    {"id": "PANDU", "name": "Pandu Port", "latitude": 26.168, "longitude": 91.685},
+    {"id": "FATASIL", "name": "Fatasil Ambari", "latitude": 26.108, "longitude": 91.72}
+  ],
   "phases": [
     {"tick": 0, "name": "normal", "events": []},
     {"tick": 5, "name": "reports_begin", "events": ["REPORT_RECEIVED"]},

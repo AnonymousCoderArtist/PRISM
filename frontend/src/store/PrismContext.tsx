@@ -4,7 +4,8 @@ import type { AppViewState, Report, Source, Incident, Resource, WardProperties }
 import { mockIncidents, mockResources, mockReports, simReportPool, simSourcePool, wardActivity, globalActivity } from "../data/mock";
 import type { PrismResource } from "../resources/resourceTypes";
 import { SIMULATED_RESOURCES, stepSimulatedResources } from "../resources/simulatedResources";
-import { fetchIncidents, fetchReports, fetchResources, fetchPrismResources, wsUrl } from "../services/api";
+import { fetchIncidents, fetchReports, fetchResources, fetchPrismResources, fetchPrediction, wsUrl } from "../services/api";
+import type { WeatherPrediction } from "../services/api";
 
 type PlanAssignment = {
   id: string;
@@ -35,11 +36,13 @@ type PrismContextValue = AppViewState & {
   planReady: boolean;
   planPhase: "idle" | "connecting" | "collecting" | "verifying" | "optimizing" | "ready";
   movingAssets: { id: string; lon: number; lat: number; label: string; kind: "ambulance" | "helicopter"; progress: number; trail: [number, number][]; etaMin: number; totalMin: number }[];
+  weatherByLocation: Record<string, WeatherPrediction>;
   api: {
     reportsEndpoint: "GET /api/reports";
     incidentsEndpoint: "GET /api/incidents";
     resourcesEndpoint: "GET /api/resources";
     wsEndpoint: "WS /api/simulation/ws/live";
+    weatherEndpoint: "GET /api/intelligence/predict/{lat}/{lon}";
   };
 };
 
@@ -68,6 +71,7 @@ export function PrismProvider({ children }: { children: ReactNode }) {
   const [prismResources, setPrismResources] = useState<PrismResource[]>(() => []);
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
   const [resourceTrails, setResourceTrails] = useState<Map<string, [number, number][]>>(() => new Map());
+  const [weatherByLocation, setWeatherByLocation] = useState<Record<string, WeatherPrediction>>({});
 
   const reportIdx = useRef(0);
   const sourceIdx = useRef(0);
@@ -375,6 +379,16 @@ export function PrismProvider({ children }: { children: ReactNode }) {
           ]);
         } else if (eventType === "INFORMATION_VOID_DETECTED") {
           // void state can be updated here if needed
+        } else if (eventType === "WEATHER_FORECAST_UPDATED") {
+          if (payload?.location_id && payload?.weather && payload?.prediction) {
+            setWeatherByLocation(prev => ({
+              ...prev,
+              [payload.location_id as string]: {
+                weather: payload.weather,
+                prediction: payload.prediction,
+              },
+            }));
+          }
         } else if (eventType === "SIMULATION_TICK") {
           // tick counter or phase updates can be handled here
         }
@@ -414,6 +428,7 @@ export function PrismProvider({ children }: { children: ReactNode }) {
       setSelectedResourceId(null);
       setSelectedWardCode(null);
       setSelectedIncidentId(null);
+      setWeatherByLocation({});
     }
   }, [simulationState]);
 
@@ -444,13 +459,15 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     planReady,
     planPhase,
     movingAssets,
+    weatherByLocation,
     api: {
       reportsEndpoint: "GET /api/reports",
       incidentsEndpoint: "GET /api/incidents",
       resourcesEndpoint: "GET /api/resources",
       wsEndpoint: "WS /api/simulation/ws/live",
+      weatherEndpoint: "GET /api/intelligence/predict/{lat}/{lon}",
     },
-  }), [selectedWardCode, selectedIncidentId, mapMode, simulationState, reports, sources, activity, plan, planReady, planPhase, incidents, movingAssets, prismResources, selectedResourceId, resourceTrails, selectedResource, resources]);
+  }), [selectedWardCode, selectedIncidentId, mapMode, simulationState, reports, sources, activity, plan, planReady, planPhase, incidents, movingAssets, prismResources, selectedResourceId, resourceTrails, selectedResource, resources, weatherByLocation]);
 
   return <PrismContext.Provider value={value}>{children}</PrismContext.Provider>;
 }
