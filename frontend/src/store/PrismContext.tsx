@@ -259,13 +259,15 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, []);
 
+  // Google Maps style dispatch — resources stay at base until SIMULATE → plan ready
   useEffect(() => {
+    // When plan not ready, keep resources idle at base; do not step
+    if (planPhase !== "ready") return;
     let tick = 0;
     const id = setInterval(() => {
       tick += 1;
       setPrismResources(prev => {
         const next = stepSimulatedResources(prev, tick);
-        // update trails for covered line
         setResourceTrails(mprev => {
           const nm = new Map(mprev);
           for (const r of next) {
@@ -281,7 +283,7 @@ export function PrismProvider({ children }: { children: ReactNode }) {
       });
     }, 120);
     return () => clearInterval(id);
-  }, []);
+  }, [planPhase]);
 
   useEffect(() => {
     if (simulationState === "idle") {
@@ -294,6 +296,11 @@ export function PrismProvider({ children }: { children: ReactNode }) {
       setPlan([]);
       setPlanPhase("idle");
       setMovingAssets([]);
+      // reset fleet to base idle positions (Google Maps style — no movement before dispatch)
+      setPrismResources(SIMULATED_RESOURCES.slice());
+      const m = new Map<string, [number, number][]>();
+      for (const r of SIMULATED_RESOURCES) m.set(r.id, [[r.lng, r.lat]]);
+      setResourceTrails(m);
     }
   }, [simulationState]);
 
