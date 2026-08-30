@@ -1,11 +1,33 @@
 import { motion } from "framer-motion";
 import { AlertTriangle, Truck, Route, Play, Pause, Zap, ShieldCheck } from "lucide-react";
+import { useState, useEffect } from "react";
 import { usePrism } from "../store/PrismContext";
+import { fetchWeather } from "../services/api";
 import { Button } from "@/components/ui/neon-button";
 import { DotPattern } from "@/components/ui/dot-pattern-1";
 
 export function LeftPanel() {
   const { simulationState, setSimulationState, plan, planPhase } = usePrism();
+  const [weather, setWeather] = useState<{ condition: string; rainfall: number; probability: number; risk: number; disasters: string[] } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchWeather(26.1445, 91.7362);
+        if (!cancelled) {
+          setWeather({
+            condition: data.weather_condition,
+            rainfall: data.rainfall_next_6h_mm,
+            probability: data.rain_probability,
+            risk: data.forecast_risk,
+            disasters: data.suspected_disasters,
+          });
+        }
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <aside className="panel prism-left" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -78,6 +100,31 @@ export function LeftPanel() {
               <div className="mono" style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 2, lineHeight: 1.35 }}>Coverage:<br />7 active units<br />12 total</div>
             </div>
           </div>
+
+          {/* UPCOMING WEATHER — under plan list */}
+          {weather && (
+            <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 3, padding: "7px 8px", display: "flex", flexDirection: "column", gap: 5 }}>
+              <div className="mono" style={{ fontSize: 8, letterSpacing: "0.1em", color: "var(--cyan)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span>UPCOMING WEATHER • 6H</span>
+                <span style={{ color: "var(--text-faint)" }}>Guwahati</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5 }}>
+                <div style={{ textAlign: "center" }}>
+                  <div className="mono" style={{ fontSize: 7, color: "var(--text-muted)" }}>RAIN</div>
+                  <div className="mono" style={{ fontSize: 11, fontWeight: 800, color: "var(--cyan)", lineHeight: 1.1, marginTop: 2 }}>{weather.rainfall.toFixed(1)}<span style={{ fontSize: 8, fontWeight: 400 }}> mm</span></div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div className="mono" style={{ fontSize: 7, color: "var(--text-muted)" }}>PROB</div>
+                  <div className="mono" style={{ fontSize: 11, fontWeight: 800, color: weather.probability > 60 ? "var(--amber)" : "var(--lime)", lineHeight: 1.1, marginTop: 2 }}>{weather.probability}<span style={{ fontSize: 8, fontWeight: 400 }}> %</span></div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div className="mono" style={{ fontSize: 7, color: "var(--text-muted)" }}>RISK</div>
+                  <div className="mono" style={{ fontSize: 11, fontWeight: 800, color: weather.risk > 50 ? "var(--amber)" : "var(--lime)", lineHeight: 1.1, marginTop: 2 }}>{weather.risk}</div>
+                </div>
+              </div>
+              <div className="mono" style={{ fontSize: 8, color: "var(--text-dim)", textTransform: "capitalize", marginTop: 2 }}>{weather.condition} • suspect: <span style={{ color: "var(--amber)" }}>{weather.disasters.join(", ") || "—"}</span></div>
+            </div>
+          )}
 
           <div style={{ background: "rgba(168,139,255,0.10)", border: "1px solid rgba(168,139,255,0.32)", borderRadius: 4, padding: "10px 11px", display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

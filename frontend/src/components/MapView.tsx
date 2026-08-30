@@ -20,6 +20,7 @@ export function MapView() {
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const [hoverAsset, setHoverAsset] = useState<{ id: string; label: string; kind: string; eta: number; x: number; y: number; lon: number; lat: number; progress: number; destination?: string; destLat?: number; destLon?: number; status?: string } | null>(null);
   const [hoverIncident, setHoverIncident] = useState<{ id: string; title: string; severity: string; event_type: string; people: number; priority: number; x: number; y: number } | null>(null);
+  const [hoverSignalLoss, setHoverSignalLoss] = useState<{ ward: string; name: string; x: number; y: number } | null>(null);
   const { selectedWardCode, selectWard, selectIncident, incidents, movingAssets, simulationState, planPhase, prismResources, resourceTrails, selectedResourceId, selectResource, selectedResource } = usePrism();
   const prismResRef = useRef(prismResources);
   prismResRef.current = prismResources;
@@ -394,6 +395,44 @@ export function MapView() {
             "circle-opacity": 0.95,
           },
         } as unknown as never);
+        // Animated radar ring — pulses outward under each moving resource
+        map.addLayer({
+          id: "prism-png-radar",
+          type: "circle",
+          source: "prism-png-resources",
+          paint: {
+            "circle-radius": [
+              "interpolate", ["linear"], ["zoom"],
+              10, 6,
+              13, 12,
+              16, 20
+            ],
+            "circle-color": [
+              "match", ["get", "kind"],
+              "ambulance", "#FFFFFF",
+              "helicopter", "#CCFF00",
+              "boat", "#48D8FF",
+              "rescue_vehicle", "#F5B942",
+              "#8A9698"
+            ],
+            "circle-opacity": [
+              "interpolate", ["linear"], ["zoom"],
+              10, 0.0,
+              13, 0.18,
+              16, 0.12
+            ],
+            "circle-stroke-width": 1.2,
+            "circle-stroke-color": [
+              "match", ["get", "kind"],
+              "ambulance", "#FFFFFF",
+              "helicopter", "#CCFF00",
+              "boat", "#48D8FF",
+              "rescue_vehicle", "#F5B942",
+              "#8A9698"
+            ],
+            "circle-stroke-opacity": 0.6,
+          },
+        } as unknown as never);
         map.addLayer({
           id: "prism-png-layer",
           type: "symbol",
@@ -421,20 +460,7 @@ export function MapView() {
             "icon-opacity": 1,
           },
         } as unknown as never);
-        // subtle selected highlight — no extra circles per earlier request, just allow filter-based glow if needed (kept invisible by default)
-        map.addLayer({
-          id: "prism-png-selected",
-          type: "circle",
-          source: "prism-png-resources",
-          filter: ["==", ["get", "id"], "__none__"] as unknown as never,
-          paint: {
-            "circle-radius": 18,
-            "circle-color": "#CCFF00",
-            "circle-opacity": 0.0,
-            "circle-stroke-color": "#CCFF00",
-            "circle-stroke-width": 0,
-          },
-        } as unknown as never);
+        // (no extra selection circle per user request)
         pngReadyRef.current = true;
 
         // Pulse animation on signal-loss cities
@@ -497,6 +523,20 @@ export function MapView() {
           }
         });
 
+        // Hover on a signal-loss city → "no signal" tooltip
+        map.on("mousemove", "cities-signal-loss-fill", (e: maplibregl.MapLayerMouseEvent) => {
+          if (!e.features?.[0]) return;
+          const p = e.features[0].properties as Record<string, unknown>;
+          const swc = p.sourcewardcode;
+          const lgd = p.ward_lgd_code;
+          const ward = swc ? String(swc) : (typeof lgd === "number" ? String(lgd % 100) : "?");
+          setHoverSignalLoss({ ward, name: String(p.ward_lgd_name ?? `Ward ${ward}`), x: e.point.x, y: e.point.y });
+          map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", "cities-signal-loss-fill", () => {
+          setHoverSignalLoss(null);
+          map.getCanvas().style.cursor = "";
+        });
         // Click on a signal-loss city → pin activity graph to that ward
         map.on("click", "cities-signal-loss-fill", (e: maplibregl.MapLayerMouseEvent) => {
           if (!e.features?.[0]) return;
@@ -511,12 +551,6 @@ export function MapView() {
             const center = (e as unknown as { lngLat?: maplibregl.LngLat }).lngLat;
             if (center) map.flyTo({ center: [center.lng, center.lat], zoom: 12.4, pitch: 42, duration: 800, essential: true });
           }
-        });
-        map.on("mouseenter", "cities-signal-loss-fill", () => {
-          map.getCanvas().style.cursor = "pointer";
-        });
-        map.on("mouseleave", "cities-signal-loss-fill", () => {
-          map.getCanvas().style.cursor = "";
         });
 
         map.on("mousemove", "incidents-circle", (e: maplibregl.MapLayerMouseEvent) => {
@@ -798,7 +832,7 @@ export function MapView() {
         return {
           type: "Feature",
           geometry: { type: "Point", coordinates: [r.lng, r.lat] },
-          properties: { id: r.id, kind: r.kind, heading: 0, headingAdj: 0, icon, status: r.status },
+          properties: { id: r.id, kind: r.kind, heading: r.heading, headingAdj: r.heading, icon, status: r.status },
         };
       }),
     } as unknown as never;
@@ -810,17 +844,6 @@ export function MapView() {
     const map = mapRef.current;
     if (!map || !loaded || !pngReadyRef.current) return;
     // highlight selected via filter (circle layer) + icon-size pop via feature-state? keep simple filter
-    if (map.getLayer("prism-png-selected")) {
-      if (selectedResourceId) {
-        map.setFilter("prism-png-selected", ["==", ["get", "id"], selectedResourceId] as never);
-        map.setPaintProperty("prism-png-selected", "circle-opacity", 0.22);
-        map.setPaintProperty("prism-png-selected", "circle-stroke-width", 1.4);
-      } else {
-        map.setFilter("prism-png-selected", ["==", ["get", "id"], "__none__"] as never);
-        map.setPaintProperty("prism-png-selected", "circle-opacity", 0);
-        map.setPaintProperty("prism-png-selected", "circle-stroke-width", 0);
-      }
-    }
     if (selectedResource) {
       const curZ = map.getZoom();
       if (curZ < 12.5) map.flyTo({ center: [selectedResource.lng, selectedResource.lat], zoom: 13.2, pitch: 52, bearing: -10, duration: 700, essential: true });
@@ -877,9 +900,6 @@ export function MapView() {
       try { map.off("click", "prism-png-layer", onClick as never); } catch { /* ignore */ }
       try { map.off("mousemove", "prism-png-layer", onHover as never); } catch { /* ignore */ }
       try { map.off("mouseleave", "prism-png-layer", onLeave as never); } catch { /* ignore */ }
-      try { map.off("click", "prism-png-selected", onClick as never); } catch { /* ignore */ }
-      try { map.off("mousemove", "prism-png-selected", onHover as never); } catch { /* ignore */ }
-      try { map.off("mouseleave", "prism-png-selected", onLeave as never); } catch { /* ignore */ }
     };
   }, [loaded, selectResource]);
 
@@ -993,6 +1013,25 @@ export function MapView() {
               {hoverWard.name.toUpperCase()} {selectedWardCode?.toString() === hoverWard.code ? "— ACTIVE" : ""}
             </div>
             <div className="mono" style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 2 }}>Ward No. {hoverWard.code.replace(/^69/, "")} • {hoverWard.area} • {selectedWardCode?.toString() === hoverWard.code ? "selected ward" : "hover"}</div>
+          </div>
+        )}
+        {hoverSignalLoss && (
+          <div style={{
+            position: "absolute",
+            left: Math.min(hoverSignalLoss.x + 14, 520),
+            top: Math.min(hoverSignalLoss.y + 14, 420),
+            background: "rgba(8,12,14,0.98)",
+            border: "1px solid rgba(245,185,66,0.42)",
+            borderLeft: "2px solid #F5B942",
+            borderRadius: 4, padding: "8px 9px", pointerEvents: "none", zIndex: 6, minWidth: 220,
+            boxShadow: "0 10px 28px rgba(0,0,0,0.55)",
+          }}>
+            <div className="mono" style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.08em", color: "#F5B942" }}>⚠ NO SIGNAL — {hoverSignalLoss.name.toUpperCase()}</div>
+            <div className="mono" style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 4, lineHeight: 1.4 }}>
+              Ward {hoverSignalLoss.ward} silent for &gt; 30 min<br />
+              Last report: unknown • Activity graph: flatline
+            </div>
+            <div className="mono" style={{ fontSize: 8, color: "var(--text-faint)", marginTop: 5 }}>click to pin activity graph to this ward</div>
           </div>
         )}
         {hoverAsset && (

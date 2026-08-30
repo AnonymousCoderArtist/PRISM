@@ -7,8 +7,12 @@ export function BottomPanel() {
   const { activity, selectedWardCode } = usePrism();
   const accent = "#CCFF00";
   const accentDim = "rgba(204,255,0,0.18)";
+  // Silent wards 33 / 41 / 57 — pinned activity graph is forced to flat
+  const silentWards = ["33", "41", "57"];
 
   const isFlat = useMemo(() => {
+    // If user pinned a known silent ward, force flat
+    if (selectedWardCode != null && silentWards.includes(String(selectedWardCode))) return true;
     if (activity.length < 10) return false;
     const last = activity.slice(-10);
     const max = Math.max(...last);
@@ -16,9 +20,15 @@ export function BottomPanel() {
     const variance = max - min;
     const avg = last.reduce((a, b) => a + b, 0) / last.length;
     return variance < 1.2 && avg < 2.5; // silent = low + flat
-  }, [activity]);
+  }, [activity, selectedWardCode]);
 
-  const xLabels = useMemo(() => activity.map((_, i) => `${String(9 + Math.floor(i / 6)).padStart(2, "0")}:${String((i * 10) % 60).padStart(2, "0")}`), [activity]);
+  // For flat (silent) wards, show a perfectly straight horizontal line
+  const chartData = useMemo(() => {
+    if (isFlat) return Array(activity.length || 30).fill(0);
+    return activity;
+  }, [isFlat, activity]);
+
+  const xLabels = useMemo(() => (chartData.length ? chartData.map((_, i) => `${String(9 + Math.floor(i / 6)).padStart(2, "0")}:${String((i * 10) % 60).padStart(2, "0")}`) : []), [chartData]);
 
   const option = useMemo(() => ({
     backgroundColor: "transparent",
@@ -48,9 +58,9 @@ export function BottomPanel() {
     },
     series: [
       {
-        data: activity,
+        data: chartData,
         type: "line",
-        smooth: true,
+        smooth: !isFlat,
         symbol: "none",
         lineStyle: { color: isFlat ? "#A88BFF" : accent, width: 1.8 },
         areaStyle: {

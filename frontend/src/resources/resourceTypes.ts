@@ -16,6 +16,8 @@ export type PrismResource = {
   altTarget?: { lat: number; lng: number };
   etaMin?: number;
   mission?: string;
+  dispatchDelay?: number; // seconds before this resource starts moving (staggered dispatch)
+  progress?: number; // 0..1 along the current curve
 };
 
 /** Lightweight descriptor for backend GET /api/resources → PrismResource adapter */

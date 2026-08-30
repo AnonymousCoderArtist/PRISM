@@ -1,27 +1,17 @@
 import type { PrismResource } from "./resourceTypes";
+import { curvePoints } from "./ResourceRoutes";
 
 /**
  * Simulated fleet — demo mode.
  * Each resource originates from a DISTINCT named operational base
  * (river stations, fire stations, hospitals, depots, helipad) spread
  * across Guwahati. No two share the same start point. Routes fan out
- * from the nearest base to the dispatched incident, then loop back to
- * a different base so the demo never collapses to a single origin.
+ * from the nearest base to the dispatched incident, then loop back.
+ * Each has a unique speed (km/h) so the demo feels realistic.
  *
- * Bases are real-ish Guwahati operational points:
- *  - PANDU GHAT         (boat station on Brahmaputra, west)
- *  - FATAZIL GHAT        (boat station, central south)
- *  - GUWAHATI PORT       (boat station, north)
- *  - GMCH HOSPITAL       (medical hub, central)
- *  - DISPUR HOSPITAL     (medical hub, south-central)
- *  - PANBAZAR FIRE STN   (fire/rescue, central)
- *  - JALUKBARI DEPOT     (rescue, west)
- *  - BORJHAR AIRBASE     (helicopter, south-west)
- *  - ZOO ROAD DEPOT      (utility, south)
- *  - CHANDMARI STATION   (north-east)
+ * Bases are real-ish Guwahati operational points.
  */
 
-// Operational bases — each with a real-ish lat/lng for the Guwahati area.
 const BASES = {
   PANDU_GHAT:    { lat: 26.1675, lng: 91.6850, label: "Pandu Ghat" },
   FATAZIL_GHAT:  { lat: 26.1080, lng: 91.7200, label: "Fatasil Ghat" },
@@ -33,9 +23,10 @@ const BASES = {
   BORJHAR:       { lat: 26.1040, lng: 91.5850, label: "Borjhar Airbase" },
   ZOO_ROAD:      { lat: 26.1370, lng: 91.7520, label: "Zoo Road Depot" },
   CHANDMARI:     { lat: 26.1655, lng: 91.7555, label: "Chandmari Station" },
+  KHANAPARA:     { lat: 26.1280, lng: 91.7820, label: "Khanapara Station" },
+  AZARA:         { lat: 26.0950, lng: 91.6200, label: "Azara Station" },
 } as const;
 
-// Spread of incident target locations so routes fan out across the city
 const INCIDENTS = {
   BHANGAGARH:  { lat: 26.1495, lng: 91.7655, label: "Bhangagarh" },
   PALTAN_BZR:  { lat: 26.1585, lng: 91.7485, label: "Paltan Bazaar" },
@@ -46,31 +37,45 @@ const INCIDENTS = {
   GANESHGURI:  { lat: 26.1425, lng: 91.7405, label: "Ganeshguri" },
   BELTOLA:     { lat: 26.1385, lng: 91.7455, label: "Beltola" },
   SIX_MILE:    { lat: 26.1515, lng: 91.7425, label: "Six Mile" },
+  CHANDMARI:   { lat: 26.1655, lng: 91.7555, label: "Chandmari" },
+  KHANAPARA:   { lat: 26.1280, lng: 91.7820, label: "Khanapara" },
+  NOONMATI:    { lat: 26.1090, lng: 91.7500, label: "Noonmati" },
 } as const;
 
-/**
- * Each entry:
- *  - `base`        → where the resource originates (its home station)
- *  - `target`      → first incident location it dispatches to
- *  - `altTarget`   → next incident it will cycle to after the first dispatch
- *                    (so on loop the path actually moves between areas instead
- *                    of bouncing between the same two points)
- */
-const DISPATCHES: { id: string; kind: PrismResource["kind"]; speed: number; mission: string; base: { lat: number; lng: number; label: string }; target: { lat: number; lng: number; label: string }; altTarget: { lat: number; lng: number; label: string } }[] = [
-  // 3 BOATS — each from a different river station
-  { id: "BOAT-174", kind: "boat",        speed: 22, mission: "Flood rescue — Brahmaputra",         base: BASES.PANDU_GHAT,    target: INCIDENTS.DISPUR,      altTarget: INCIDENTS.MALIGAON },
-  { id: "BOAT-181", kind: "boat",        speed: 14, mission: "Evacuation — Pandu waters",          base: BASES.FATAZIL_GHAT,  target: INCIDENTS.PALTAN_BZR,  altTarget: INCIDENTS.GANESHGURI },
-  { id: "BOAT-192", kind: "boat",        speed: 18, mission: "Rescue deployment — upper river",    base: BASES.GUWAHATI_PORT, target: INCIDENTS.SIX_MILE,    altTarget: INCIDENTS.PALTAN_BZR },
+type DispatchDef = {
+  id: string;
+  kind: PrismResource["kind"];
+  speed: number; // km/h, distinct for every resource
+  mission: string;
+  base: { lat: number; lng: number; label: string };
+  target: { lat: number; lng: number; label: string };
+  altTarget: { lat: number; lng: number; label: string };
+};
 
-  // 2 AMBULANCES — each from a different hospital
-  { id: "AMB-021",  kind: "ambulance",   speed: 34, mission: "Medical — Paltan Bazaar",            base: BASES.GMCH_HOSPITAL, target: INCIDENTS.PALTAN_BZR,  altTarget: INCIDENTS.BHANGAGARH },
-  { id: "AMB-014",  kind: "ambulance",   speed: 18, mission: "Medical — Maligaon",                  base: BASES.DISPUR_HOSP,   target: INCIDENTS.MALIGAON,    altTarget: INCIDENTS.LOKHRA },
+/** Each dispatch originates from a DIFFERENT base and dispatches to a DIFFERENT incident.
+ *  All 12 resources are dispatched one by one (staggered) after the plan is ready. */
+const DISPATCHES: DispatchDef[] = [
+  // 4 BOATS — distinct river stations
+  { id: "BOAT-174", kind: "boat", speed: 22, mission: "Flood rescue — Brahmaputra",   base: BASES.PANDU_GHAT,    target: INCIDENTS.DISPUR,      altTarget: INCIDENTS.MALIGAON },
+  { id: "BOAT-181", kind: "boat", speed: 14, mission: "Evacuation — Pandu waters",    base: BASES.FATAZIL_GHAT,  target: INCIDENTS.PALTAN_BZR,  altTarget: INCIDENTS.GANESHGURI },
+  { id: "BOAT-192", kind: "boat", speed: 18, mission: "Rescue — upper river",         base: BASES.GUWAHATI_PORT, target: INCIDENTS.SIX_MILE,    altTarget: INCIDENTS.PALTAN_BZR },
+  { id: "BOAT-205", kind: "boat", speed: 26, mission: "Supply — Noonmati refinery",   base: BASES.JALUKBARI,     target: INCIDENTS.NOONMATI,    altTarget: INCIDENTS.LOKHRA },
 
-  // 1 HELICOPTER — Borjhar airbase
-  { id: "AIR-007",  kind: "helicopter",  speed: 145, mission: "Aerial assessment — Six Mile",       base: BASES.BORJHAR,       target: INCIDENTS.SIX_MILE,    altTarget: INCIDENTS.BHANGAGARH },
+  // 3 AMBULANCES — distinct hospitals
+  { id: "AMB-021",  kind: "ambulance", speed: 34, mission: "Medical — Paltan Bazaar",    base: BASES.GMCH_HOSPITAL, target: INCIDENTS.PALTAN_BZR,  altTarget: INCIDENTS.BHANGAGARH },
+  { id: "AMB-014",  kind: "ambulance", speed: 18, mission: "Medical — Maligaon",         base: BASES.DISPUR_HOSP,   target: INCIDENTS.MALIGAON,    altTarget: INCIDENTS.LOKHRA },
+  { id: "AMB-033",  kind: "ambulance", speed: 28, mission: "Medical — Khanapara",         base: BASES.PANBAZAR_FIRE, target: INCIDENTS.KHANAPARA,   altTarget: INCIDENTS.SIX_MILE },
 
-  // 1 RESCUE VEHICLE — fire station
-  { id: "RV-009",   kind: "rescue_vehicle", speed: 28, mission: "Rescue — Fatasil corridor",        base: BASES.PANBAZAR_FIRE, target: INCIDENTS.BELTOLA,     altTarget: INCIDENTS.DISPUR },
+  // 2 HELICOPTERS — distinct airbases
+  { id: "AIR-007",  kind: "helicopter", speed: 145, mission: "Aerial — Six Mile",         base: BASES.BORJHAR,       target: INCIDENTS.SIX_MILE,    altTarget: INCIDENTS.BHANGAGARH },
+  { id: "AIR-011",  kind: "helicopter", speed: 162, mission: "Aerial — Chandmari",        base: BASES.AZARA,         target: INCIDENTS.CHANDMARI,   altTarget: INCIDENTS.DISPUR },
+
+  // 2 RESCUE VEHICLES — distinct stations
+  { id: "RV-009",   kind: "rescue_vehicle", speed: 28, mission: "Rescue — Fatasil corridor", base: BASES.PANBAZAR_FIRE, target: INCIDENTS.BELTOLA,     altTarget: INCIDENTS.DISPUR },
+  { id: "RV-015",   kind: "rescue_vehicle", speed: 36, mission: "Rescue — Khanapara",        base: BASES.KHANAPARA,     target: INCIDENTS.KHANAPARA,   altTarget: INCIDENTS.JALUKBARI_W },
+
+  // 1 EXCAVATOR — Chandmari station
+  { id: "EXC-002",  kind: "rescue_vehicle", speed: 12, mission: "Clear debris — Bhangagarh", base: BASES.CHANDMARI,    target: INCIDENTS.BHANGAGARH,  altTarget: INCIDENTS.PALTAN_BZR },
 ];
 
 export const SIMULATED_RESOURCES: PrismResource[] = DISPATCHES.map(d => ({
@@ -79,7 +84,7 @@ export const SIMULATED_RESOURCES: PrismResource[] = DISPATCHES.map(d => ({
   lat: d.base.lat,
   lng: d.base.lng,
   heading: 0,
-  status: "en_route",
+  status: "available",
   speed: d.speed,
   destination: d.target.label,
   destLat: d.target.lat,
@@ -88,45 +93,124 @@ export const SIMULATED_RESOURCES: PrismResource[] = DISPATCHES.map(d => ({
   altTarget: { lat: d.altTarget.lat, lng: d.altTarget.lng },
   mission: d.mission,
   etaMin: 12,
+  dispatchDelay: 0,
+  progress: 0, // 0..1 along the current segment
 }));
 
-/** Straight movement + 3-stage loop (base → target → altTarget → base) so the fleet
- *  visibly fans out from many origins and cycles through distinct incident areas. */
+SIMULATED_RESOURCES.forEach((r, i) => { r.dispatchDelay = i * 1.8; });
+
+/**
+ * Polyline length (sum of segment lengths) — used to convert km/h + tick duration into
+ * progress-along-curve per tick so the icon travels at real-world speed.
+ */
+function polylineLength(pts: [number, number][]): number {
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) {
+    total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+  }
+  return total;
+}
+
+/** Look up the point on a polyline at progress (0..1) */
+function pointAtProgress(pts: [number, number][], progress: number): [number, number] {
+  if (pts.length < 2) return pts[0] ?? [0, 0];
+  const clamped = Math.max(0, Math.min(1, progress));
+  const total = polylineLength(pts);
+  if (total === 0) return pts[pts.length - 1];
+  const target = total * clamped;
+  let acc = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const seg = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    if (acc + seg >= target) {
+      const localT = (target - acc) / seg;
+      return [
+        pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * localT,
+        pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * localT,
+      ];
+    }
+    acc += seg;
+  }
+  return pts[pts.length - 1];
+}
+
+/** Tangent direction (heading) at progress along the polyline (degrees, 0=north) */
+function headingAtProgress(pts: [number, number][], progress: number): number {
+  if (pts.length < 2) return 0;
+  const eps = 0.005;
+  const a = pointAtProgress(pts, Math.max(0, progress - eps));
+  const b = pointAtProgress(pts, Math.min(1, progress + eps));
+  // atan2 of delta longitude (east), delta latitude (north) — clockwise from north
+  return (Math.atan2(b[0] - a[0], b[1] - a[1]) * 180) / Math.PI;
+}
+
+/**
+ * Step every resource forward.
+ * Each resource has a unique speed (km/h) → progress-along-curve per tick.
+ * The position is read from the SAME curve that's drawn on the map, so the icon
+ * travels along the visible curved path (not a straight line).
+ *
+ * Loop: base → target → altTarget → base, so the path keeps fanning out across Guwahati.
+ */
 export function stepSimulatedResources(prev: PrismResource[], t: number): PrismResource[] {
   return prev.map(r => {
-    if (r.status === "available" || r.status === "offline") return r;
-    const destLat = r.destLat ?? r.lat;
-    const destLng = r.destLon ?? r.lng;
-    const totalDist = Math.hypot(destLat - r.lat, destLng - r.lng);
-    if (totalDist < 0.00055) {
-      // Arrived at the current target — advance to the next point in the loop
-      if (r.status === "en_route") {
+    // Stagger: stay available until dispatchDelay seconds elapse, then start moving
+    if (r.status === "available") {
+      if (t >= (r.dispatchDelay ?? 0)) {
         const home = r.origin ?? { lat: r.lat, lng: r.lng };
-        const alt = r.altTarget;
-        if (alt && Math.hypot(r.lat - alt.lat, r.lng - alt.lng) > 0.0008) {
-          // Currently at home (just looped) → go to altTarget first
-          // Currently at target → go to home base to "resupply"
-          const atHome = Math.hypot(r.lat - home.lat, r.lng - home.lng) < 0.0008;
-          if (atHome) {
-            return { ...r, destLat: alt.lat, destLon: alt.lng, destination: "redeploy", etaMin: 10 };
-          }
-          // Otherwise, head home
-          return { ...r, destLat: home.lat, destLon: home.lng, destination: "return", etaMin: 8 };
-        }
-        // No alt target — just bounce between current and home
-        return { ...r, destLat: home.lat, destLon: home.lng, etaMin: 8 };
+        const destLat = r.destLat ?? r.lat;
+        const destLng = r.destLon ?? r.lng;
+        const curve = curvePoints([home.lng, home.lat], [destLng, destLat]);
+        const curveLenDeg = polylineLength(curve);
+        const curveLenKm = curveLenDeg * 111; // ~111 km per degree
+        const etaMin = Math.max(1, Math.round((curveLenKm / Math.max(1, r.speed ?? 20)) * 60));
+        return { ...r, status: "en_route" as const, progress: 0, etaMin };
       }
       return r;
     }
-    const base = r.kind === "helicopter" ? 0.00042 : r.kind === "boat" ? 0.00012 : 0.00016;
-    const f = Math.min(1, base * (0.9 + Math.sin(t * 0.6) * 0.12));
-    const ratio = Math.min(1, f / totalDist);
-    const nlng = r.lng + (destLng - r.lng) * ratio;
-    const nlat = r.lat + (destLat - r.lat) * ratio;
-    // Heading: bearing from current → destination
-    const bearing = (Math.atan2(destLng - r.lng, destLat - r.lat) * 180) / Math.PI;
-    const remain = Math.hypot(destLat - nlat, destLng - nlng);
-    const eta = Math.max(1, Math.ceil((remain / Math.max(0.0001, totalDist)) * (r.etaMin ?? 12)));
-    return { ...r, lng: nlng, lat: nlat, heading: bearing, etaMin: remain < 0.0006 ? 1 : eta };
+    if (r.status === "offline") return r;
+    const home = r.origin ?? { lat: r.lat, lng: r.lng };
+    const alt = r.altTarget;
+    const destLat = r.destLat ?? r.lat;
+    const destLng = r.destLon ?? r.lng;
+    // Build the current curve (must match the routeLayer's curve exactly)
+    const curve = curvePoints([r.lng, r.lat], [destLng, destLat]);
+    const curveLenDeg = polylineLength(curve);
+    const curveLenKm = curveLenDeg * 111;
+    // Speed → progress per tick (120ms ≈ 0.12s)
+    const speed = r.speed ?? 20;
+    const kmPerTick = (speed / 3600) * 0.12;
+    const advance = curveLenKm > 0 ? kmPerTick / curveLenKm : 0;
+    let progress = (r.progress ?? 0) + advance;
+    let lon = r.lng;
+    let lat = r.lat;
+    let heading = r.heading;
+    let etaMin = r.etaMin ?? 1;
+    if (progress >= 1) {
+      // Reached destination — advance to next point in the loop
+      progress = 1;
+      const pt = curve[curve.length - 1];
+      lon = pt[0];
+      lat = pt[1];
+      // Pick the next destination
+      const atHome = Math.hypot(r.lat - home.lat, r.lng - home.lng) < 0.0008;
+      if (alt && !atHome) {
+        // Just arrived at target → go home
+        return { ...r, lat: home.lat, lng: home.lng, destLat: home.lat, destLon: home.lng, destination: "return base", progress: 1, etaMin: 8 };
+      }
+      if (alt && atHome) {
+        // Just arrived back home → go to alt target
+        return { ...r, lat: alt.lat, lng: alt.lng, destLat: alt.lat, destLon: alt.lng, destination: "redeploy", progress: 0, etaMin: 10 };
+      }
+      // No alt target — bounce
+      return { ...r, lat: home.lat, lng: home.lng, destLat: home.lat, destLon: home.lng, destination: "return", progress: 0, etaMin: 8 };
+    }
+    // Walk along curve
+    const pt = pointAtProgress(curve, progress);
+    lon = pt[0];
+    lat = pt[1];
+    heading = headingAtProgress(curve, progress);
+    const remainKm = curveLenKm * (1 - progress);
+    etaMin = Math.max(1, Math.round((remainKm / Math.max(1, speed)) * 60));
+    return { ...r, lat, lng: lon, heading, progress, etaMin };
   });
 }

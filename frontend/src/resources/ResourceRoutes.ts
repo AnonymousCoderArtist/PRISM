@@ -6,14 +6,14 @@ export type RouteGeoJSON = {
   features: { type: "Feature"; properties: Record<string, unknown>; geometry: { type: "LineString"; coordinates: number[][] } }[];
 };
 
-function curvePoints(s: [number, number], e: [number, number], steps = 48): [number, number][] {
+export function curvePoints(s: [number, number], e: [number, number], steps = 56): [number, number][] {
   const dx = e[0] - s[0];
   const dy = e[1] - s[1];
   const dist = Math.hypot(dx, dy);
-  // Control point offset perpendicular to the line, scaled by distance
+  // Control point offset perpendicular to the line, scaled by distance — pronounced arc so the curve is clearly visible
   const nx = -dy / (dist || 1);
   const ny = dx / (dist || 1);
-  const lift = dist * 0.28; // arc height
+  const lift = dist * 0.45; // arc height — bumped from 0.28 to make curve obvious
   const cx = (s[0] + e[0]) / 2 + nx * lift;
   const cy = (s[1] + e[1]) / 2 + ny * lift;
   const pts: [number, number][] = [];

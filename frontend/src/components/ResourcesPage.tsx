@@ -1,5 +1,26 @@
 import { motion } from "framer-motion";
-import { Ambulance, Truck, Shield, Building2, Utensils, Fuel, Users, BedDouble, HeartPulse, X, MapPinned, Radio, Home } from "lucide-react";
+import { Ambulance, Truck, Shield, Building2, Utensils, Fuel, Users, BedDouble, HeartPulse, X, MapPinned, Radio, Home, Ship, Plane } from "lucide-react";
+import { usePrism } from "../store/PrismContext";
+import type { PrismResource } from "../resources/resourceTypes";
+
+function kindIcon(kind: PrismResource["kind"]) {
+  if (kind === "boat") return Ship;
+  if (kind === "helicopter") return Plane;
+  if (kind === "ambulance") return Ambulance;
+  return Truck;
+}
+
+function statusColor(status: PrismResource["status"]): string {
+  if (status === "en_route") return "var(--lime)";
+  if (status === "active") return "var(--amber)";
+  if (status === "arrived") return "var(--green)";
+  if (status === "available") return "var(--cyan)";
+  return "var(--text-faint)";
+}
+
+function statusLabel(status: PrismResource["status"]): string {
+  return ({ en_route: "EN ROUTE", active: "ON SCENE", arrived: "ARRIVED", available: "STANDBY", offline: "OFFLINE" } as const)[status];
+}
 
 const inventory = [
   { icon: Ambulance, label: "AMBULANCES", count: "18", detail: "12 available • 4 deployed • 2 maintenance", color: "var(--red)", sub: "ALS 6 • BLS 12 • 102/108 integration" },
@@ -22,6 +43,10 @@ const helplines = [
 ];
 
 function Inner({ onClose }: { onClose: () => void }) {
+  const { prismResources } = usePrism();
+  const enRoute = prismResources.filter(r => r.status === "en_route").length;
+  const onScene = prismResources.filter(r => r.status === "arrived" || r.status === "active").length;
+  const standby = prismResources.filter(r => r.status === "available").length;
   return (
     <div style={{ maxWidth: 1120, margin: "0 auto", display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border)", paddingBottom: 10 }}>
@@ -86,6 +111,39 @@ function Inner({ onClose }: { onClose: () => void }) {
             <div className="mono" style={{ fontSize: 8, color: "var(--text-faint)", marginTop: 3 }}>{it.sub}</div>
           </motion.div>
         ))}
+      </div>
+
+      {/* LIVE DISPATCH — updates as each resource is dispatched (one by one after plan ready) */}
+      <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 4, padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="mono" style={{ fontSize: 9, letterSpacing: "0.12em", color: "var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <Radio size={11} style={{ color: "var(--lime)" }} /> LIVE DISPATCH — UPDATING AS RESOURCES MOVE
+          </span>
+          <span style={{ color: "var(--text-faint)" }}>{prismResources.length} TOTAL • {enRoute} EN ROUTE • {onScene} ON SCENE • {standby} STANDBY</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 7 }}>
+          {prismResources.map(r => {
+            const Icon = kindIcon(r.kind);
+            const col = statusColor(r.status);
+            return (
+              <div key={r.id} style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderLeft: `2px solid ${col}`, borderRadius: 3, padding: "7px 9px" }}>
+                <div className="mono" style={{ fontSize: 9, color: "var(--text)", display: "flex", alignItems: "center", gap: 6, fontWeight: 700 }}>
+                  <Icon size={12} style={{ color: col }} />
+                  <span>{r.id}</span>
+                  <span style={{ marginLeft: "auto", color: col, fontSize: 8, letterSpacing: "0.08em" }}>{statusLabel(r.status)}</span>
+                </div>
+                <div className="mono" style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 2 }}>{r.mission ?? r.destination ?? "—"}</div>
+                <div className="mono" style={{ fontSize: 8, color: "var(--text-faint)", marginTop: 2, display: "flex", justifyContent: "space-between" }}>
+                  <span>→ {r.destination ?? "—"}</span>
+                  <span>{r.speed ?? 0} km/h • ETA {r.etaMin ?? "—"} min</span>
+                </div>
+                <div style={{ height: 3, background: "var(--border)", borderRadius: 999, overflow: "hidden", marginTop: 4 }}>
+                  <div style={{ width: `${Math.round(((r.progress ?? 0) * 100))}%`, height: "100%", background: col, transition: "width 0.3s linear" }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1.4fr 0.9fr", gap: 10 }}>
