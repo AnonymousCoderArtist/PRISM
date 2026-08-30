@@ -13,23 +13,30 @@ Local-first disaster intelligence backend for PRISM.
 - OR-Tools
 - Google GenAI SDK (optional)
 - OpenAI-compatible provider support (optional)
+- wttr.in (live weather)
 
-## Setup
+## Run
 
 ```bash
 cd backend
 uv sync
+copy .env.example .env
+uv run uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+
+The API is at <http://localhost:8000>. Interactive docs at <http://localhost:8000/docs>.
+
+The first run auto-creates `backend/data/prism.db` and seeds 5 areas, 2 incidents, 3 reports, 5 resources, 2 evidences from `backend/data/demo/`.
 
 ## Environment
 
 Copy `.env.example` to `.env` and set values as needed.
 
 | Variable | Purpose | Default |
-|---|---|---|
+| --- | --- | --- |
 | `DATABASE_URL` | SQLite database URL | `sqlite:///data/prism.db` |
 | `SIMULATION_SPEED_MS` | Simulation tick interval | `2000` |
-| `GEMINI_API_KEY` | Google AI API key | _(empty = deterministic fallback)_ |
+| `GEMINI_API_KEY` | Google AI API key | _(empty = demo mode)_ |
 | `GEMINI_MODEL` | Gemini model name | `gemini-3.5-flash` |
 | `GEMINI_MODEL_FALLBACKS` | Gemini fallback models (comma-separated) | `gemini-1.5-flash,gemini-flash-latest` |
 | `AI_PROVIDER` | AI provider selection | _(empty = auto)_ |
@@ -37,17 +44,23 @@ Copy `.env.example` to `.env` and set values as needed.
 | `OPENAI_BASE_URL` | OpenAI-compatible base URL | `https://api.openai.com/v1` |
 | `OPENAI_MODEL` | OpenAI-compatible model name | `gpt-4o-mini` |
 
-> The backend is designed to run without any AI key. If no provider is configured or the call fails, the system falls back to deterministic structured responses.
+### Demo mode vs live AI
 
-### Model fallbacks (Gemini)
+The backend ships in **demo mode** by default. Every AI method returns a precomputed deterministic response — no API key, no token consumption, no rate limit. The frontend shows a **DEMO · AI NOT INVOKED** badge.
 
-If the primary Gemini model returns an error (404, 503, quota exhaustion, etc.), the adapter automatically retries the request with the models listed in `GEMINI_MODEL_FALLBACKS` before falling back to deterministic responses. This makes the system resilient to model deprecations and temporary outages.
+When the user clicks SIMULATE in the UI, the frontend calls `POST /api/simulation/start`. The backend then tries to initialise the configured AI provider. If a key is present, the adapter switches to live mode and every subsequent AI call invokes the model. The frontend badge switches to **AI LIVE**.
+
+If no key is configured, the simulation starts but demo responses continue to be served. `GET /api/simulation/status` returns `ai_live: false` and a `ai_stats` block with simulated call count.
 
 ### Provider selection rules
 
 - If `AI_PROVIDER=openai`, the backend uses the OpenAI-compatible client.
 - If `GEMINI_API_KEY` is set and `AI_PROVIDER` is not `openai`, the backend uses Gemini.
-- Otherwise, the backend uses deterministic fallback responses.
+- Otherwise, the backend uses precomputed demo responses.
+
+### Model fallbacks (Gemini)
+
+If the primary Gemini model returns an error (404, 503, quota exhaustion, etc.), the adapter automatically retries with each model in `GEMINI_MODEL_FALLBACKS` before returning a demo response.
 
 ### Example: OpenAI-compatible local model
 
@@ -67,80 +80,78 @@ OPENAI_BASE_URL=https://api.groq.com/openai/v1
 OPENAI_MODEL=llama3-8b-8192
 ```
 
-## Run
+## Serve the built frontend
 
 ```bash
-uv run uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+cd ..\frontend
+npm run build
+mkdir ..\backend\static 2>nul
+xcopy /E /I /Y dist\* ..\backend\static\
 ```
 
-The API is available at `http://localhost:8000`.
-Interactive docs: `http://localhost:8000/docs`.
+Now `uv run uvicorn backend.main:app --host 0.0.0.0 --port 8000` serves both the API and the SPA at <http://localhost:8000>.
 
 ## CORS
 
-The backend allows requests from the frontend dev servers by default.
+CORS is preconfigured for:
 
-Allowed origins during development:
-- `http://localhost:5173`
+- `http://localhost:5173` (Vite)
 - `http://localhost:3000`
 - `http://localhost:8080`
-- `*`
+- `*` (development fallback)
 
-If you need to extend this, edit `backend/src/backend/main.py`.
+In production, the SPA is served by FastAPI so CORS is not needed. Edit `src/backend/main.py` to extend the allow list.
 
-## Serve the built frontend
+## Endpoints
 
-1. Build the frontend and copy the output into `backend/static`:
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/health` | Liveness + DB status |
+| `GET` | `/api/areas` | List Guwahati areas |
+| `GET` | `/api/incidents` | List incidents |
+| `GET` | `/api/reports` | List reports |
+| `GET` | `/api/resources` | List resources + assignments |
+| `POST` | `/api/intelligence/analyze` | Structure a report (AI) |
+| `POST` | `/api/intelligence/verify` | Verify a report set (AI) |
+| `POST` | `/api/intelligence/priority` | Recompute incident priority |
+| `POST` | `/api/intelligence/situation` | Overall situation summary (AI) |
+| `POST` | `/api/intelligence/silence` | Information-void detection |
+| `GET` | `/api/intelligence/confidence` | Confidence breakdown |
+| `GET` | `/api/intelligence/weather/{lat}/{lon}` | Weather forecast (wttr.in) |
+| `GET` | `/api/intelligence/predict/{lat}/{lon}` | Live forecast + AI disaster prediction |
+| `POST` | `/api/intelligence/resources/plan` | OR-Tools dispatch plan |
+| `POST` | `/api/simulation/start` | Start simulation (enables live AI) |
+| `POST` | `/api/simulation/pause` | Pause simulation |
+| `POST` | `/api/simulation/reset` | Reset simulation |
+| `GET` | `/api/simulation/status` | Status, AI mode, AI stats |
+| `WS` | `/api/simulation/ws/live` | Live event stream |
 
-```bash
-cd frontend
-npm run build
-mkdir -p ../backend/static
-cp -r dist/* ../backend/static/
-```
+### WebSocket events
 
-2. Start the backend. In addition to the API, it will serve:
-- static assets under `/static`
-- the frontend `index.html` under `/`
+- `SIMULATION_TICK` — `{ tick, phase }`
+- `REPORT_RECEIVED` — `{ report_id, source, location }`
+- `INCIDENT_UPDATED` — `{ incident_id, status }`
+- `RESOURCE_ASSIGNED` — `{ resource_id, incident_id, eta_minutes }`
+- `PLAN_GENERATED` — `{ plan_id, assignments }`
+- `INFORMATION_VOID_DETECTED` — `{ area_id, void_score }`
+- `WEATHER_FORECAST_UPDATED` — `{ location_id, name, latitude, longitude, weather, prediction }` (broadcast every 6 ticks per watch location)
 
-## Key Endpoints
-
-- `GET /api/health`
-- `GET /api/areas`
-- `GET /api/incidents`
-- `GET /api/resources`
-- `GET /api/reports`
-- `POST /api/intelligence/analyze`
-- `POST /api/intelligence/verify`
-- `POST /api/intelligence/priority`
-- `POST /api/intelligence/situation`
-- `POST /api/intelligence/silence`
-- `GET /api/intelligence/confidence`
-- `GET /api/intelligence/weather/{lat}/{lon}`
-- `POST /api/intelligence/resources/plan`
-- `POST /api/intelligence/query`
-- `POST /api/simulation/start`
-- `POST /api/simulation/pause`
-- `POST /api/simulation/reset`
-- `GET /api/simulation/status`
-- `WS /api/simulation/ws/live`
-
-## Testing the AI Adapter
-
-### Gemini
+## Quick test commands
 
 ```bash
-curl -X POST http://localhost:8000/api/intelligence/analyze \
-  -H "Content-Type: application/json" \
-  -d '{"report_id":"R-001"}'
+# health
+curl http://localhost:8000/api/health
+
+# list incidents
+curl http://localhost:8000/api/incidents
+
+# live weather forecast for Guwahati
+curl http://localhost:8000/api/intelligence/predict/26.1445/91.7362
+
+# situation summary (AI — demo response if no key)
+curl -X POST http://localhost:8000/api/intelligence/situation
+
+# start simulation, then check status
+curl -X POST http://localhost:8000/api/simulation/start -H "Content-Type: application/json" -d "{}"
+curl http://localhost:8000/api/simulation/status
 ```
-
-### OpenAI-compatible
-
-```bash
-curl -X POST http://localhost:8000/api/intelligence/analyze \
-  -H "Content-Type: application/json" \
-  -d '{"report_id":"R-001"}'
-```
-
-If the configured provider is unavailable, the response will be a deterministic fallback derived from the report fields.
