@@ -68,9 +68,13 @@ export function PrismProvider({ children }: { children: ReactNode }) {
   const [plan, setPlan] = useState<PlanAssignment[]>([]);
   const [planPhase, setPlanPhase] = useState<PrismContextValue["planPhase"]>("idle");
   const [movingAssets, setMovingAssets] = useState<PrismContextValue["movingAssets"]>([]);
-  const [prismResources, setPrismResources] = useState<PrismResource[]>(() => []);
+  const [prismResources, setPrismResources] = useState<PrismResource[]>(() => SIMULATED_RESOURCES.slice());
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
-  const [resourceTrails, setResourceTrails] = useState<Map<string, [number, number][]>>(() => new Map());
+  const [resourceTrails, setResourceTrails] = useState<Map<string, [number, number][]>>(() => {
+    const m = new Map<string, [number, number][]>();
+    for (const r of SIMULATED_RESOURCES) m.set(r.id, [[r.lng, r.lat]]);
+    return m;
+  });
   const [weatherByLocation, setWeatherByLocation] = useState<Record<string, WeatherPrediction>>({});
 
   const reportIdx = useRef(0);
