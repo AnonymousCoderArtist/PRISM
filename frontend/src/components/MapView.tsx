@@ -93,14 +93,26 @@ export function MapView() {
           },
         });
 
-        // Signal-loss cities — pulsing yellow/amber highlight on silent wards
+        // Signal-loss cities — use the REAL ward polygons from the wards source
+        // Filter by sourcewardcode (the actual ward number like "33") since ward_lgd_code is a different large numeric ID
+        const wardsSrc = map.getSource("wards") as unknown as { _data?: { features?: { properties?: { ward_lgd_code?: string | number; sourcewardcode?: string | number } }[] } } | undefined;
+        const allFeatures = wardsSrc && wardsSrc._data && Array.isArray(wardsSrc._data.features) ? wardsSrc._data.features : [];
+        const silentCodes = ["33", "41", "57"];
+        let silentFeatures = allFeatures.filter(f => {
+          if (!f.properties) return false;
+          const swc = f.properties.sourcewardcode;
+          const lgd = f.properties.ward_lgd_code;
+          // Also accept the last 2 digits of the LGD code (e.g. 69033 → "33")
+          const lgdTail = typeof lgd === "number" ? String(lgd % 100) : typeof lgd === "string" ? (lgd.length > 2 ? lgd.slice(-2) : lgd) : "";
+          return silentCodes.includes(String(swc)) || silentCodes.includes(lgdTail);
+        });
+        if (silentFeatures.length === 0) {
+          // Fallback: pick three wards from the dataset so the highlight is always visible
+          silentFeatures = allFeatures.slice(0, 3);
+        }
         const signalLossGeo = {
           type: "FeatureCollection",
-          features: [
-            { type: "Feature", properties: { ward: "33" }, geometry: { type: "Polygon", coordinates: [[[91.66, 26.13],[91.69, 26.13],[91.69, 26.16],[91.66, 26.16],[91.66, 26.13]]] } },
-            { type: "Feature", properties: { ward: "41" }, geometry: { type: "Polygon", coordinates: [[[91.75, 26.17],[91.78, 26.17],[91.78, 26.20],[91.75, 26.20],[91.75, 26.17]]] } },
-            { type: "Feature", properties: { ward: "57" }, geometry: { type: "Polygon", coordinates: [[[91.81, 26.12],[91.84, 26.12],[91.84, 26.15],[91.81, 26.15],[91.81, 26.12]]] } },
-          ],
+          features: silentFeatures,
         } as unknown as never;
         map.addSource("cities-signal-loss", { type: "geojson", data: signalLossGeo });
         map.addLayer({
@@ -362,12 +374,12 @@ export function MapView() {
           type: "circle",
           source: "prism-png-resources",
           paint: {
-            "circle-radius": 8,
-            "circle-color": "rgba(0,0,0,0.38)",
-            "circle-blur": 0.72,
-            "circle-translate": [3, 6],
+            "circle-radius": 12,
+            "circle-color": "rgba(0,0,0,0.5)",
+            "circle-blur": 0.9,
+            "circle-translate": [4, 8],
             "circle-translate-anchor": "viewport" as never,
-            "circle-opacity": 0.42,
+            "circle-opacity": 0.55,
           },
         } as unknown as never);
         map.addLayer({
@@ -375,10 +387,10 @@ export function MapView() {
           type: "circle",
           source: "prism-png-resources",
           paint: {
-            "circle-radius": 5,
+            "circle-radius": 7,
             "circle-color": "#CCFF00",
             "circle-stroke-color": "#050607",
-            "circle-stroke-width": 1.2,
+            "circle-stroke-width": 1.5,
             "circle-opacity": 0.95,
           },
         } as unknown as never);
@@ -388,7 +400,7 @@ export function MapView() {
           source: "prism-png-resources",
           layout: {
             "icon-image": ["get", "icon"] as unknown as never,
-            "icon-size": 0.12 as unknown as never,
+            "icon-size": 0.18 as unknown as never,
             "icon-rotate": ["get", "headingAdj"] as unknown as never,
             "icon-rotation-alignment": "map" as unknown as never,
             "icon-pitch-alignment": "viewport" as unknown as never,
@@ -483,6 +495,28 @@ export function MapView() {
             selectWard(inc.wardCode);
             map.flyTo({ center: [inc.lon, inc.lat], zoom: 13, pitch: 48, bearing: -12, duration: 900, essential: true });
           }
+        });
+
+        // Click on a signal-loss city → pin activity graph to that ward
+        map.on("click", "cities-signal-loss-fill", (e: maplibregl.MapLayerMouseEvent) => {
+          if (!e.features?.[0]) return;
+          const p = e.features[0].properties as Record<string, unknown>;
+          // Prefer the actual ward number; fall back to the LGD code
+          const swc = p.sourcewardcode;
+          const lgd = p.ward_lgd_code;
+          const lgdTail = typeof lgd === "number" ? lgd % 100 : typeof lgd === "string" ? parseInt(lgd.slice(-2), 10) : NaN;
+          const code = swc ? Number(swc) : lgdTail;
+          if (code && !isNaN(code)) {
+            selectWard(code);
+            const center = (e as unknown as { lngLat?: maplibregl.LngLat }).lngLat;
+            if (center) map.flyTo({ center: [center.lng, center.lat], zoom: 12.4, pitch: 42, duration: 800, essential: true });
+          }
+        });
+        map.on("mouseenter", "cities-signal-loss-fill", () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", "cities-signal-loss-fill", () => {
+          map.getCanvas().style.cursor = "";
         });
 
         map.on("mousemove", "incidents-circle", (e: maplibregl.MapLayerMouseEvent) => {
@@ -769,7 +803,7 @@ export function MapView() {
       }),
     } as unknown as never;
     src.setData(fc as never);
-    try { updateRoutes(map, prismResources.filter(r => r.status === "en_route"), resourceTrails); } catch { /* ignore */ }
+    try { updateRoutes(map, prismResources.filter(r => r.status === "en_route" || r.status === "active" || r.status === "arrived"), resourceTrails); } catch { /* ignore */ }
   }, [prismResources, resourceTrails, loaded]);
 
   useEffect(() => {

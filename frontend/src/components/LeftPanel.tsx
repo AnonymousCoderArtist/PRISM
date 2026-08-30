@@ -1,12 +1,11 @@
 import { motion } from "framer-motion";
-import { MapPinned, AlertTriangle, LocateFixed, EyeOff, Truck, Route, Play, Pause, Zap, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Truck, Route, Play, Pause, Zap, ShieldCheck } from "lucide-react";
 import { usePrism } from "../store/PrismContext";
-import { mockStats } from "../data/mock";
 import { Button } from "@/components/ui/neon-button";
 import { DotPattern } from "@/components/ui/dot-pattern-1";
 
 export function LeftPanel() {
-  const { mapMode, setMapMode, simulationState, setSimulationState, plan, planPhase, incidents, selectWard, selectIncident, selectedIncidentId } = usePrism();
+  const { simulationState, setSimulationState, plan, planPhase } = usePrism();
 
   return (
     <aside className="panel prism-left" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -106,51 +105,8 @@ export function LeftPanel() {
         </div>
       </div>
 
-      {/* === SECTOR OVERVIEW SHORT — BELOW PLAN === */}
-      <div style={{ borderTop: "1px solid var(--border)", background: "var(--bg-panel-2)", display: "flex", flexDirection: "column", flexShrink: 0 }}>
-        <div className="panel-header" style={{ height: 28, minHeight: 28 }}>
-          <span className="panel-title" style={{ fontSize: 8.5 }}><span className="panel-title-dot" style={{ width: 5, height: 5 }} /> SECTOR OVERVIEW</span>
-          <span className="mono" style={{ fontSize: 8, color: "var(--text-faint)" }}>{mockStats.totalWards} WARDS • {mockStats.activeIncidents} ACTIVE</span>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 5, padding: "6px 6px" }}>
-          {[
-            { label: "AVG CONF", value: `${mockStats.avgConfidence}%`, color: "var(--lime)" },
-            { label: "PRIORITY", value: `${mockStats.activeIncidents}`, color: "var(--amber)" },
-            { label: "VOIDS", value: `${mockStats.voidsDetected}`, color: "var(--purple)" },
-            { label: "REP/HR", value: `${mockStats.reportsLastHour}`, color: "var(--cyan)" },
-          ].map(s => (
-            <div key={s.label} style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 3, padding: "6px 4px", textAlign: "center" }}>
-              <div className="mono" style={{ fontSize: 7, letterSpacing: "0.08em", color: "var(--text-muted)" }}>{s.label}</div>
-              <div style={{ fontSize: 11, fontWeight: 800, color: s.color, lineHeight: 1, marginTop: 2 }}>{s.value}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 4, padding: "0 6px 6px" }}>
-          {[
-            { id: "wards", label: "WARDS", icon: MapPinned },
-            { id: "priority", label: "PRIO", icon: AlertTriangle },
-            { id: "voids", label: "VOIDS", icon: EyeOff },
-            { id: "res", label: "RES", icon: LocateFixed },
-          ].map(m => {
-            const active = mapMode === (m.id === "res" ? "resources" : m.id);
-            return (
-              <button key={m.id} onClick={() => setMapMode((m.id === "res" ? "resources" : m.id) as never)} style={{
-                display: "flex", alignItems: "center", gap: 4, justifyContent: "center", padding: "4px 2px", borderRadius: 3, cursor: "pointer",
-                fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, letterSpacing: "0.05em",
-                background: active ? "var(--lime-dim)" : "transparent", color: active ? "var(--lime)" : "var(--text-muted)",
-                border: active ? "1px solid var(--lime-border)" : "1px solid var(--border)",
-              }}>
-                <m.icon size={9} /> {m.label}
-              </button>
-            );
-          })}
-        </div>
-        <div style={{ padding: "0 6px 6px", display: "flex", gap: 4, flexWrap: "wrap" }}>
-          {incidents.slice(0, 3).map(i => (
-            <button key={i.id} onClick={() => { selectWard(i.wardCode); selectIncident(i.id); }} className="mono" style={{ fontSize: 8, padding: "3px 6px", borderRadius: 3, cursor: "pointer", background: selectedIncidentId === i.id ? "var(--lime-dim)" : "var(--bg-elevated)", border: selectedIncidentId === i.id ? "1px solid var(--lime-border)" : "1px solid var(--border)", color: selectedIncidentId === i.id ? "var(--lime)" : "var(--text-dim)" }}>{i.wardName} • {i.id}</button>
-          ))}
-        </div>
-      </div>
+      {/* SECTOR OVERVIEW removed per request — empty space below */}
+      <div style={{ flex: "1 1 0", minHeight: 0, display: "flex", flexDirection: "column", borderTop: "1px solid var(--border)", background: "var(--bg-panel-2)", overflow: "hidden" }} />
     </aside>
   );
 }

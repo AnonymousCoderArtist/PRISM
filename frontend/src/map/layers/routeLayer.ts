@@ -47,9 +47,13 @@ export function updateRoutes(map: maplibregl.Map, resources: PrismResource[], _t
   const remSrc = map.getSource("prism-resource-routes") as maplibregl.GeoJSONSource | undefined;
   if (!remSrc) return;
   const remaining = buildRouteCollection(resources);
+  // Show routes for any resource that is moving or has moved (en_route, active, arrived) — keeps path visible after plan
   const filteredRemaining = {
     type: "FeatureCollection" as const,
-    features: remaining.features.filter((f: unknown) => ((f as { properties: { status: string } }).properties.status) === "en_route"),
+    features: remaining.features.filter((f: unknown) => {
+      const s = (f as { properties: { status: string } }).properties.status;
+      return s === "en_route" || s === "active" || s === "arrived";
+    }),
   };
   remSrc.setData(filteredRemaining as unknown as never);
 }
