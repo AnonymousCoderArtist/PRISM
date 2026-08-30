@@ -227,8 +227,9 @@ export function loadModel(kind: ResourceKind): Promise<THREE.Group> {
       undefined,
       (err) => {
         console.warn(`[ModelLoader] ${kind} failed ${url}`, err);
+        // Do NOT poison cache — allow retry, return high-poly fallback directly
+        promiseCache.delete(url);
         const ph = makePlaceholder(kind);
-        cache.set(url, ph);
         resolve(cloneGroup(ph));
       }
     );

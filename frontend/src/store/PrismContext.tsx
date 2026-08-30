@@ -65,13 +65,10 @@ export function PrismProvider({ children }: { children: ReactNode }) {
   const [plan, setPlan] = useState<PlanAssignment[]>([]);
   const [planPhase, setPlanPhase] = useState<PrismContextValue["planPhase"]>("idle");
   const [movingAssets, setMovingAssets] = useState<PrismContextValue["movingAssets"]>([]);
-  const [prismResources, setPrismResources] = useState<PrismResource[]>(() => SIMULATED_RESOURCES.slice());
+  // Start hidden — only appear after SIMULATE → plan ready (user request)
+  const [prismResources, setPrismResources] = useState<PrismResource[]>(() => []);
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
-  const [resourceTrails, setResourceTrails] = useState<Map<string, [number, number][]>>(() => {
-    const m = new Map<string, [number, number][]>();
-    for (const r of SIMULATED_RESOURCES) m.set(r.id, [[r.lng, r.lat]]);
-    return m;
-  });
+  const [resourceTrails, setResourceTrails] = useState<Map<string, [number, number][]>>(() => new Map());
 
   const reportIdx = useRef(0);
   const sourceIdx = useRef(0);
@@ -236,9 +233,9 @@ export function PrismProvider({ children }: { children: ReactNode }) {
   }, [planPhase, movingAssets.length]);
 
   // ---- 3D resource simulation — backend-ready fallback ----
-  // Try GET /api/resources once; if fails keep simulated data.
-  // Movement tick interpolates via stepSimulatedResources and updates trails.
+  // Fleet stays hidden until plan ready — then dispatched like Google Maps navigation
   useEffect(() => {
+    if (planPhase !== "ready") return;
     let cancelled = false;
     (async () => {
       try {
@@ -252,12 +249,22 @@ export function PrismProvider({ children }: { children: ReactNode }) {
             const m = new Map<string, [number, number][]>();
             for (const r of adapted) m.set(r.id, [[r.lng, r.lat]]);
             setResourceTrails(m);
+            return;
           }
         }
       } catch { /* keep simulated */ }
+      if (cancelled) return;
+      // No backend — dispatch simulated fleet now (first appearance)
+      setPrismResources(prev => prev.length ? prev : SIMULATED_RESOURCES.slice());
+      setResourceTrails(prev => {
+        if (prev.size) return prev;
+        const m = new Map<string, [number, number][]>();
+        for (const r of SIMULATED_RESOURCES) m.set(r.id, [[r.lng, r.lat]]);
+        return m;
+      });
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [planPhase]);
 
   // Google Maps style dispatch — resources stay at base until SIMULATE → plan ready
   useEffect(() => {
@@ -296,11 +303,10 @@ export function PrismProvider({ children }: { children: ReactNode }) {
       setPlan([]);
       setPlanPhase("idle");
       setMovingAssets([]);
-      // reset fleet to base idle positions (Google Maps style — no movement before dispatch)
-      setPrismResources(SIMULATED_RESOURCES.slice());
-      const m = new Map<string, [number, number][]>();
-      for (const r of SIMULATED_RESOURCES) m.set(r.id, [[r.lng, r.lat]]);
-      setResourceTrails(m);
+      // hide fleet until next dispatch — user request: no boats visible before plan
+      setPrismResources([]);
+      setResourceTrails(new Map());
+      setSelectedResourceId(null);
     }
   }, [simulationState]);
 

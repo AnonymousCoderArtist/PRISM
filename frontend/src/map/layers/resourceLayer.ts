@@ -167,9 +167,16 @@ export class Resource3DLayer implements CustomLayerInterface {
     }
   }
 
-  private mercatorTranslate(lng: number, lat: number): { x: number; y: number; z: number; scale: number } {
-    const mc = (maplibregl as unknown as { MercatorCoordinate: { fromLngLat: (c: [number, number], alt: number) => { x: number; y: number; z: number; meterInMercatorCoordinateUnits: () => number } } }).MercatorCoordinate.fromLngLat([lng, lat], 0);
+  private mercatorTranslate(lng: number, lat: number, altMeters: number): { x: number; y: number; z: number; scale: number } {
+    const mc = (maplibregl as unknown as { MercatorCoordinate: { fromLngLat: (c: [number, number], alt: number) => { x: number; y: number; z: number; meterInMercatorCoordinateUnits: () => number } } }).MercatorCoordinate.fromLngLat([lng, lat], altMeters);
     return { x: mc.x, y: mc.y, z: mc.z, scale: mc.meterInMercatorCoordinateUnits() };
+  }
+
+  private altitudeForKind(kind: ResourceKind): number {
+    if (kind === "helicopter") return 22; // clear of 42m buildings
+    if (kind === "boat") return 1.4; // water level, no ground sink
+    if (kind === "rescue_vehicle") return 3.2;
+    return 3.0; // ambulance
   }
 
   private async ensureModel(r: PrismResource): Promise<void> {
@@ -214,31 +221,24 @@ export class Resource3DLayer implements CustomLayerInterface {
   }
 
   private applyMercator(outer: THREE.Group, inner: THREE.Group, lng: number, lat: number, heading: number, kind: ResourceKind): void {
-    const { x, y, z, scale } = this.mercatorTranslate(lng, lat);
+    const alt = this.altitudeForKind(kind);
+    const { x, y, z, scale } = this.mercatorTranslate(lng, lat, alt);
     outer.position.set(x, y, z);
-    // Fixed screen-size scaling: mercator meters → world, then counter-scale by zoom so pixel size stays constant (Google Maps style)
     const zoom = this.map ? this.map.getZoom() : 11.3;
     const base = scale * this.baseScaleFactor;
-    // 2^(zoom - refZoom) is how much map's projection magnifies world; divide to keep constant pixels
     const refZoom = 11.3;
     const zoomFactor = Math.pow(2, zoom - refZoom);
     let s = base / Math.max(0.12, zoomFactor);
-    // Clamp so models never become huge at z<5 or tiny at z>18
     s = Math.max(base * 0.28, Math.min(base * 4.2, s));
     if (kind === "helicopter") s *= this.heliBoost;
     if (kind === "boat") s *= this.boatBoost;
-    // Slight damp for rescue_vehicle
     if (kind === "rescue_vehicle") s *= 1.05;
     outer.scale.set(s, s, s);
-    // Heading: after rotateX=PI/2, yaw is around Z
     const yawOffset: number = (inner.userData.yawOffset as number) ?? 0;
     inner.rotation.z = THREE.MathUtils.degToRad(heading) + yawOffset;
-    // Helicopter needs to float slight above ground
-    if (kind === "helicopter") {
-      inner.position.z = 0.18 / Math.max(0.5, s / base); // keep slight lift in world units
-    } else {
-      inner.position.z = 0;
-    }
+    // Keep model base at outer's altitude — no extra inner Z sink
+    inner.position.z = 0;
+    inner.position.y = 0;
   }
 
   private tick(dt: number): void {
