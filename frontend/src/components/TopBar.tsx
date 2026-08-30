@@ -1,38 +1,51 @@
 import { motion } from "framer-motion";
-import { Activity, Clock3, Radio, MapPinned, Play, Pause, RotateCcw, Truck, Home, Route } from "lucide-react";
+import { Activity, Clock3, Radio, MapPinned, Play, Pause, RotateCcw, Truck, Home, CloudRain } from "lucide-react";
 import { useCurrentTime } from "../hooks/useCurrentTime";
 import { usePrism } from "../store/PrismContext";
 import { PrismLogo } from "./PrismLogo";
+import { fetchPrediction } from "../services/api";
 
 export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void; view?: string }) {
   const now = useCurrentTime();
   const { simulationState, setSimulationState } = usePrism();
+  const [weather, setWeather] = useState<string>("--");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchPrediction(26.1445, 91.7362).then(d => {
+      if (!cancelled) setWeather(d.prediction.disaster_type === "none" ? (d.weather.weather_condition as string) : `${d.prediction.disaster_type} • ${d.weather.weather_condition}`);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <header className="prism-header" style={{
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
-      background: "var(--bg)",
-      borderBottom: "1.5px solid var(--ink)",
-      borderTop: "1.5px solid var(--ink)",
-      padding: "0 14px",
+      background: "linear-gradient(90deg,#080A0B 0%, #0A0F0F 100%)",
+      borderBottom: "1px solid var(--border)",
+      borderTop: "1.5px solid rgba(204,255,0,0.35)",
+      padding: "0 10px 0 14px",
       zIndex: 20,
       position: "relative",
       overflow: "hidden",
     }}>
+      <div style={{ position: "absolute", left: 0, right: 0, top: -1, height: 1, background: "linear-gradient(90deg, transparent, rgba(204,255,0,0.55), transparent)", opacity: 0.7, pointerEvents: "none" }} />
+      {/* subtle dot pattern for 3D depth */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: "radial-gradient(rgba(204,255,0,0.9) 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
       {/* Left: Identity + Resources button on top of menu */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 36, height: 36, display: "grid", placeItems: "center", background: "var(--ink)", borderRadius: 0 }}>
+          <div className="shadow-[0_2px_10px_rgba(204,255,0,0.12),0_1px_2px_rgba(0,0,0,0.6)]" style={{ width: 36, height: 36, display: "grid", placeItems: "center", background: "rgba(204,255,0,0.08)", border: "1px solid rgba(204,255,0,0.2)", borderRadius: 4 }}>
             <PrismLogo size={26} />
           </div>
           <div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-              <span style={{ fontFamily: "var(--font-serif)", fontWeight: 900, letterSpacing: "0.02em", fontSize: 22, color: "var(--ink)" }}>PRISM</span>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.16em", color: "var(--text-muted)", borderLeft: "1px solid var(--border)", paddingLeft: 8 }}>POST-DISASTER REALITY INTELLIGENCE</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontWeight: 800, letterSpacing: "0.14em", fontSize: 16, color: "var(--text)" }}>PRISM</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.16em", color: "var(--text-muted)", borderLeft: "1px solid var(--border-strong)", paddingLeft: 8 }}>POST-DISASTER REALITY INTELLIGENCE</span>
             </div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.12em", color: "var(--text-muted)", marginTop: 1, display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.12em", color: "var(--text-faint)", marginTop: 1, display: "flex", alignItems: "center", gap: 6 }}>
               <MapPinned size={10} /> GUWAHATI — ASSAM — INDIA <span style={{ opacity: 0.4 }}>•</span> SITUATION MAPPING
             </div>
           </div>
@@ -42,17 +55,17 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
           onClick={onOpenResources}
           className="mono"
           style={{
-            display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", cursor: "pointer",
-            background: view === "resources" ? "var(--ink)" : "transparent",
-            color: view === "resources" ? "var(--paper)" : "var(--ink)",
-            border: "1px solid var(--ink)",
-            fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
+            display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 4, cursor: "pointer",
+            background: view === "resources" ? "var(--lime)" : "rgba(204,255,0,0.08)",
+            color: view === "resources" ? "#050607" : "var(--lime)",
+            border: view === "resources" ? "1px solid var(--lime)" : "1px solid var(--lime-border)",
+            fontSize: 10, fontWeight: 800, letterSpacing: "0.1em",
           }}
         >
           <Truck size={12} /> RESOURCES {view === "resources" ? "• OPEN" : ""}
         </button>
 
-        <button onClick={() => window.scrollTo(0, 0)} title="Admin Home" className="mono" style={{ display: "grid", placeItems: "center", width: 32, height: 32, background: "transparent", border: "1px solid var(--ink)", color: "var(--ink)", cursor: "pointer" }}>
+        <button onClick={() => window.scrollTo(0, 0)} title="Admin Home" className="mono" style={{ display: "grid", placeItems: "center", width: 28, height: 28, borderRadius: 4, background: "rgba(204,255,0,0.06)", border: "1px solid var(--border)", color: "var(--lime)", cursor: "pointer" }}>
           <Home size={12} />
         </button>
 
@@ -61,32 +74,39 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{
             fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.12em",
-            color: "var(--paper)", background: "var(--ink)", border: "1px solid var(--ink)",
-            padding: "4px 8px", display: "inline-flex", alignItems: "center", gap: 6,
+            color: "var(--lime)", background: "var(--lime-dim)", border: "1px solid var(--lime-border)",
+            padding: "3px 7px", borderRadius: 2, display: "inline-flex", alignItems: "center", gap: 6,
           }}>
-            <span style={{ width: 6, height: 6, background: "var(--paper)" }} />
+            <span style={{ width: 6, height: 6, borderRadius: 999, background: "var(--lime)", boxShadow: "0 0 8px rgba(204,255,0,0.7)", animation: "pulse 1.6s infinite" }} />
             SIM
           </span>
           {simulationState === "running" ? (
             <span title="Live AI inference consuming tokens" style={{
               fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.12em",
               color: "var(--paper)", background: "var(--green)", border: "1px solid var(--green)",
-              padding: "4px 8px", display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "3px 7px", borderRadius: 2, display: "inline-flex", alignItems: "center", gap: 6,
             }}>
-              <span style={{ width: 6, height: 6, background: "var(--paper)" }} />
+              <span style={{ width: 6, height: 6, borderRadius: 999, background: "var(--paper)" }} />
               AI LIVE
             </span>
           ) : (
             <span title="Precomputed AI results, zero tokens consumed" style={{
               fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.12em",
               color: "var(--ink)", background: "var(--bg-elevated)", border: "1px solid var(--ink)",
-              padding: "4px 8px", display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "3px 7px", borderRadius: 2, display: "inline-flex", alignItems: "center", gap: 6,
             }}>
-              <span style={{ width: 6, height: 6, background: "var(--ink)" }} />
+              <span style={{ width: 6, height: 6, borderRadius: 999, background: "var(--ink)" }} />
               AI PRECOMPUTED
             </span>
           )}
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.1em", color: "var(--text-muted)" }}>WARDS: 60 • LOCAL-FIRST</span>
+          <span title="Guwahati forecast" style={{
+            fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.10em",
+            color: "var(--text-dim)", background: "var(--bg-elevated)", border: "1px solid var(--border)",
+            padding: "3px 7px", borderRadius: 2, display: "inline-flex", alignItems: "center", gap: 5,
+          }}>
+            <CloudRain size={10} /> {weather}
+          </span>
         </div>
       </div>
 
@@ -150,15 +170,6 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
             <Radio size={12} /> LIVE
           </span>
           <Activity size={14} style={{ color: "var(--green)" }} />
-          <img
-            src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face&auto=format"
-            alt="Operator"
-            className="h-7 w-7 rounded-full object-cover border border-[rgba(204,255,0,0.22)] shadow-[0_2px_8px_rgba(0,0,0,0.5),0_0_0_1px_rgba(204,255,0,0.15)]"
-            style={{ objectFit: "cover", width: "28px", height: "28px" }}
-          />
-          <span className="hidden md:inline-flex items-center justify-center h-7 w-7 rounded-full bg-[rgba(204,255,0,0.08)] border border-[rgba(204,255,0,0.18)] shadow-[0_2px_8px_rgba(0,0,0,0.4)]" title="Path data">
-            <Route size={12} style={{ color: "var(--lime)" }} />
-          </span>
         </div>
       </div>
     </header>
