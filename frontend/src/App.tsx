@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { AnimatePresence } from "framer-motion";
 import { TopBar } from "./components/TopBar";
 import { LeftPanel } from "./components/LeftPanel";
 import { RightPanel } from "./components/RightPanel";
@@ -8,23 +7,35 @@ import { MapView } from "./components/MapView";
 import { ResourcesPage } from "./components/ResourcesPage";
 import { PrismProvider } from "./store/PrismContext";
 
-function Shell() {
-  const [view, setView] = useState<"dashboard" | "resources">("dashboard");
-
+function DashboardShell({ onOpenResources, view }: { onOpenResources: () => void; view: string }) {
   return (
     <div className="prism-app" style={{ position: "relative" }}>
-      <TopBar onOpenResources={() => setView(v => v === "resources" ? "dashboard" : "resources")} view={view} />
+      <TopBar onOpenResources={onOpenResources} view={view} />
       <LeftPanel />
       <div className="prism-map panel" style={{ borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)" }}>
         <MapView />
-        <AnimatePresence>
-          {view === "resources" && <ResourcesPage onClose={() => setView("dashboard")} />}
-        </AnimatePresence>
       </div>
       <RightPanel />
       <BottomPanel />
     </div>
   );
+}
+
+function Shell() {
+  const [view, setView] = useState<"dashboard" | "resources">("dashboard");
+
+  if (view === "resources") {
+    return (
+      <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)" }}>
+        <TopBar onOpenResources={() => setView("dashboard")} view={view} />
+        <div style={{ flex: 1, overflowY: "auto", background: "var(--bg)" }}>
+          <ResourcesPage onClose={() => setView("dashboard")} embedded={false} />
+        </div>
+      </div>
+    );
+  }
+
+  return <DashboardShell onOpenResources={() => setView("resources")} view={view} />;
 }
 
 export default function App() {

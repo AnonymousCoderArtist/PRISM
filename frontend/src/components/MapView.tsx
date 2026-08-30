@@ -14,11 +14,13 @@ export function MapView() {
   const [error, setError] = useState<string | null>(null);
   const [hoverWard, setHoverWard] = useState<{ code: string; name: string; area: string } | null>(null);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
-  const { selectedWardCode, selectWard, selectIncident, incidents } = usePrism();
+  const { selectedWardCode, selectWard, selectIncident, incidents, movingAssets } = usePrism();
 
   // keep last selected for fly-to incident
   const incidentsRef = useRef(incidents);
   incidentsRef.current = incidents;
+  const movingRef = useRef(movingAssets);
+  movingRef.current = movingAssets;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -122,7 +124,7 @@ export function MapView() {
           filter: ["==", ["get", "ward_lgd_code"], -1],
         });
 
-        // Add incident markers as GeoJSON source + circle layer
+        // Add incident markers as GeoJSON source + circle layer — initially empty (verification-gated)
         const incidentGeo = {
           type: "FeatureCollection",
           features: incidentsRef.current.map(i => ({
@@ -135,7 +137,7 @@ export function MapView() {
               title: i.title,
             },
           })),
-        };
+        } as unknown as never;
 
         map.addSource("incidents", { type: "geojson", data: incidentGeo });
 
@@ -173,6 +175,106 @@ export function MapView() {
             "circle-stroke-color": "#050607",
             "circle-stroke-width": 1.6,
             "circle-opacity": 1,
+          },
+        });
+
+        // PMTiles-ready + Roads (local) — remaining tile rendering (next milestone): keep ready, optional
+        // We keep roads as optional overlay; if large file, we load lazily later. For now wards are primary.
+        // Admin centre headquarters
+        const adminGeo = {
+          type: "FeatureCollection",
+          features: [
+            { type: "Feature", geometry: { type: "Point", coordinates: [91.752, 26.142] }, properties: { name: "ADMIN HQ — Dispur Annex" } },
+          ],
+        } as unknown as never;
+        map.addSource("admin", { type: "geojson", data: adminGeo });
+        map.addLayer({
+          id: "admin-core",
+          type: "circle",
+          source: "admin",
+          paint: {
+            "circle-radius": 9,
+            "circle-color": "#CCFF00",
+            "circle-stroke-color": "#050607",
+            "circle-stroke-width": 2,
+            "circle-opacity": 0.96,
+          },
+        });
+        map.addLayer({
+          id: "admin-glow",
+          type: "circle",
+          source: "admin",
+          paint: {
+            "circle-radius": 22,
+            "circle-color": "#CCFF00",
+            "circle-opacity": 0.10,
+            "circle-blur": 0.7,
+          },
+        });
+        // label
+        map.addLayer({
+          id: "admin-label",
+          type: "symbol",
+          source: "admin",
+          layout: {
+            "text-field": "ADMIN",
+            "text-size": 9,
+            "text-font": ["Open Sans Bold"],
+            "text-offset": [0, 1.6],
+          },
+          paint: {
+            "text-color": "#CCFF00",
+            "text-halo-color": "#050607",
+            "text-halo-width": 1.2,
+          },
+        });
+
+        // Moving assets (ambulance/helicopter) — after plan ready
+        const movingGeo = {
+          type: "FeatureCollection",
+          features: movingRef.current.map(m => ({
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [m.lon, m.lat] },
+            properties: { id: m.id, kind: m.kind, label: m.label },
+          })),
+        } as unknown as never;
+        map.addSource("moving-assets", { type: "geojson", data: movingGeo });
+        map.addLayer({
+          id: "moving-glow",
+          type: "circle",
+          source: "moving-assets",
+          paint: {
+            "circle-radius": 16,
+            "circle-color": ["match", ["get", "kind"], "ambulance", "#FF4D4D", "helicopter", "#48D8FF", "#8A9698"],
+            "circle-opacity": 0.18,
+            "circle-blur": 0.6,
+          },
+        });
+        map.addLayer({
+          id: "moving-circle",
+          type: "circle",
+          source: "moving-assets",
+          paint: {
+            "circle-radius": 6,
+            "circle-color": ["match", ["get", "kind"], "ambulance", "#FF4D4D", "helicopter", "#48D8FF", "#8A9698"],
+            "circle-stroke-color": "#E8ECEB",
+            "circle-stroke-width": 1.4,
+          },
+        });
+        map.addLayer({
+          id: "moving-label",
+          type: "symbol",
+          source: "moving-assets",
+          layout: {
+            "text-field": ["get", "label"],
+            "text-size": 8.5,
+            "text-font": ["Open Sans Bold"],
+            "text-offset": [0, -1.2],
+          },
+          paint: {
+            "text-color": "#E8ECEB",
+            "text-halo-color": "#050607",
+            "text-halo-width": 1,
           },
         });
 
@@ -261,6 +363,40 @@ export function MapView() {
       map.setFilter("wards-line-selected", ["==", ["get", "ward_lgd_code"], -1]);
     }
   }, [selectedWardCode, loaded]);
+
+  // Keep incidents in sync — verification-gated red/green dots appear only after backend verification
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded() || !loaded) return;
+    const src = map.getSource("incidents") as maplibregl.GeoJSONSource | undefined;
+    if (!src) return;
+    const fc = {
+      type: "FeatureCollection",
+      features: incidents.map(i => ({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [i.lon, i.lat] },
+        properties: { id: i.id, severity: i.severity, priority: i.priority, title: i.title },
+      })),
+    } as unknown as never;
+    src.setData(fc as never);
+  }, [incidents, loaded]);
+
+  // Keep moving assets in sync — ambulance/helicopter simulation after plan
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded() || !loaded) return;
+    const src = map.getSource("moving-assets") as maplibregl.GeoJSONSource | undefined;
+    if (!src) return;
+    const fc = {
+      type: "FeatureCollection",
+      features: movingAssets.map(m => ({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [m.lon, m.lat] },
+        properties: { id: m.id, kind: m.kind, label: m.label },
+      })),
+    } as unknown as never;
+    src.setData(fc as never);
+  }, [movingAssets, loaded]);
 
   // Replay flight (same slow globe curve)
   const replay = () => {
