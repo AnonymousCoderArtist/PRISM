@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Activity, Clock3, Radio, MapPinned, Play, Pause, RotateCcw, Truck, Home, CloudRain } from "lucide-react";
 import { useCurrentTime } from "../hooks/useCurrentTime";
