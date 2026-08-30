@@ -15,15 +15,24 @@ router = APIRouter(prefix="/api/simulation", tags=["simulation"])
 
 @router.get("/status", response_model=SimulationState)
 def simulation_status() -> SimulationState:
+    from backend.services.ai_adapter import get_adapter
     state = engine.get_state()
+    state["ai_live"] = get_adapter().live
+    state["ai_stats"] = get_adapter().stats
     return SimulationState(**state)
 
 
 @router.post("/start")
 async def simulation_start(req: SimulationStartRequest) -> Response:
+    from backend.services.ai_adapter import get_adapter
+    try:
+        get_adapter().enable()
+    except Exception:
+        # if no API key is configured, demo mode continues
+        pass
     await engine.start(req.speed_ms)
     import json
-    return Response(content=json.dumps({"status": "started", "tick": engine.tick}), media_type="application/json")
+    return Response(content=json.dumps({"status": "started", "tick": engine.tick, "ai_live": get_adapter().live}), media_type="application/json")
 
 
 @router.post("/pause")
