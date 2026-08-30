@@ -803,7 +803,7 @@ export function MapView() {
     if (!map || !loaded || !pngReadyRef.current) return;
     const src = map.getSource("prism-png-resources") as maplibregl.GeoJSONSource | undefined;
     if (!src) return;
-    const moving = prismResources.filter(r => r.status === "en_route" || r.status === "active" || r.status === "arrived");
+    const moving = prismResources.filter(r => r.status === "en_route" || r.status === "active" || r.status === "arrived" || r.status === "available");
     const fc = {
       type: "FeatureCollection",
       features: moving.map(r => {
@@ -817,6 +817,23 @@ export function MapView() {
     } as unknown as never;
     src.setData(fc as never);
     try { updateRoutes(map, prismResources.filter(r => r.status === "en_route" || r.status === "active" || r.status === "arrived"), resourceTrails); } catch { /* ignore */ }
+    // Update the trail lines too
+    try {
+      const trailSrc = map.getSource("moving-trails") as maplibregl.GeoJSONSource | undefined;
+      if (trailSrc) {
+        const trails = {
+          type: "FeatureCollection",
+          features: Array.from(resourceTrails.entries())
+            .filter(([_, t]) => (t?.length ?? 0) > 1)
+            .map(([id, t]) => ({
+              type: "Feature",
+              properties: { id },
+              geometry: { type: "LineString", coordinates: t },
+            })),
+        };
+        trailSrc.setData(trails as never);
+      }
+    } catch { /* ignore */ }
   }, [prismResources, resourceTrails, loaded]);
 
   useEffect(() => {

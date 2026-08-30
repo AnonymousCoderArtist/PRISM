@@ -275,24 +275,25 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     const id = setInterval(() => {
       tick += 1;
       const secondsElapsed = tick * 0.12; // each tick is 120ms
-      setPrismResources(prev => {
-        const next = stepSimulatedResources(prev, secondsElapsed);
-        setResourceTrails(mprev => {
-          const nm = new Map(mprev);
-          for (const r of next) {
-            const cur = nm.get(r.id) ?? [];
-            const last = cur[cur.length - 1];
-            if (!last || last[0] !== r.lng || last[1] !== r.lat) {
-              nm.set(r.id, [...cur, [r.lng, r.lat] as [number, number]].slice(-42));
-            }
-          }
-          return nm;
-        });
-        return next;
-      });
+      setPrismResources(prev => stepSimulatedResources(prev, secondsElapsed));
     }, 120);
     return () => clearInterval(id);
   }, [planPhase]);
+
+  // Update resource trails whenever positions change
+  useEffect(() => {
+    setResourceTrails(prev => {
+      const nm = new Map(prev);
+      for (const r of prismResources) {
+        const cur = nm.get(r.id) ?? [];
+        const last = cur[cur.length - 1];
+        if (!last || last[0] !== r.lng || last[1] !== r.lat) {
+          nm.set(r.id, [...cur, [r.lng, r.lat] as [number, number]].slice(-42));
+        }
+      }
+      return nm;
+    });
+  }, [prismResources]);
 
   // ---- Backend WebSocket live feed (minimal integration) ----
   useEffect(() => {
