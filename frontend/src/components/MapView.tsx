@@ -289,15 +289,12 @@ export function MapView() {
         const pngDefs: { id: string; url: string }[] = [
           { id: "ambulance-icon", url: "/ambulance_icon.png" },
           { id: "ambulance-icon-flip-h", url: "/ambulance_icon_flip_h.png" },
-          { id: "ambulance-icon-flip-v", url: "/ambulance_icon_flip_v.png" },
           { id: "boat-icon", url: "/boat_icon.png" },
           { id: "boat-icon-flip-h", url: "/boat_icon_flip_h.png" },
-          { id: "boat-icon-flip-v", url: "/boat_icon_flip_v.png" },
           { id: "helicopter-icon", url: "/helicopter_icon.png" },
           { id: "helicopter-icon-flip-h", url: "/helicopter_icon_flip_h.png" },
           { id: "rescue-icon", url: "/firevehicle_icon.png" },
           { id: "rescue-icon-flip-h", url: "/firevehicle_icon_flip_h.png" },
-          { id: "rescue-icon-flip-v", url: "/firevehicle_icon_flip_v.png" },
         ];
         const loadImg = (url: string) =>
           new Promise<HTMLImageElement>((res, rej) => {
@@ -332,7 +329,7 @@ export function MapView() {
           source: "prism-png-resources",
           layout: {
             "icon-image": ["get", "icon"] as unknown as never,
-            "icon-size": ["interpolate", ["linear"], ["zoom"], 10, 0.11, 12, 0.15, 14, 0.2, 16, 0.28] as unknown as never,
+            "icon-size": 0.18 as unknown as never,
             "icon-rotate": ["get", "headingAdj"] as unknown as never,
             "icon-rotation-alignment": "map" as unknown as never,
             "icon-allow-overlap": true,
@@ -661,20 +658,20 @@ export function MapView() {
         ? [
             { icon: "boat-icon", base: 45 },
             { icon: "boat-icon-flip-h", base: 315 },
-            { icon: "boat-icon-flip-v", base: 135 },
           ]
         : kind === "helicopter"
-          ? [{ icon: "helicopter-icon", base: 225 }]
+          ? [
+              { icon: "helicopter-icon", base: 225 },
+              { icon: "helicopter-icon-flip-h", base: 135 },
+            ]
           : kind === "rescue_vehicle"
             ? [
                 { icon: "rescue-icon", base: 225 },
                 { icon: "rescue-icon-flip-h", base: 135 },
-                { icon: "rescue-icon-flip-v", base: 315 },
               ]
             : [
                 { icon: "ambulance-icon", base: 225 },
                 { icon: "ambulance-icon-flip-h", base: 135 },
-                { icon: "ambulance-icon-flip-v", base: 315 },
               ];
     let best = opts[0];
     let bestDiff = 360;
