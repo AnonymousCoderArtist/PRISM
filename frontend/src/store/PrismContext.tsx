@@ -109,11 +109,12 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     }
     // on transition to running, ensure plan is reset to collecting
     setPlanPhase("collecting");
+    // EMERGENCY fast rate: reports every 0.9s, sources every ~1.8s, plan still last
     const id = setInterval(() => {
       const now = new Date();
       const timeStr = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
 
-      // 1) always push report (primary stream)
+      // 1) push report fast
       const rp = simReportPool[reportIdx.current % simReportPool.length];
       reportIdx.current += 1;
       simCounter.current += 1;
@@ -123,40 +124,40 @@ export function PrismProvider({ children }: { children: ReactNode }) {
         time: timeStr,
         verified: Math.random() > 0.45,
       };
-      setReports(prev => [newReport, ...prev].slice(0, 24));
+      setReports(prev => [newReport, ...prev].slice(0, 28));
 
-      // 2) sources trail reports (every 2 reports ~3.6s)
-      if (simCounter.current % 2 === 0) {
+      // 2) sources slightly slower but still fast (every report now, emergency burst)
+      {
         const sp = simSourcePool[sourceIdx.current % simSourcePool.length];
         sourceIdx.current += 1;
         const newSource: Source = {
           id: `SRC-SIM-${simCounter.current}`,
           ...sp,
           time: timeStr,
-          confidence: 0.55 + Math.random() * 0.4,
+          confidence: 0.58 + Math.random() * 0.37,
         };
-        setSources(prev => [newSource, ...prev].slice(0, 18));
+        setSources(prev => [newSource, ...prev].slice(0, 22));
       }
 
-      // 3) extra activity nudge when simulating (faster drift)
+      // 3) extra activity nudge (emergency surge)
       setActivity(prev => {
         const next = prev.slice(1);
         const last = prev[prev.length - 1];
         if (selectedWardCode === 69102) next.push(0.8 + Math.random() * 0.7);
         else {
-          const delta = (Math.random() - 0.42) * 5;
+          const delta = (Math.random() - 0.42) * 6.5;
           next.push(Math.max(0.5, Math.round((last + delta) * 10) / 10));
         }
         return next;
       });
 
-      // 4) Plan sequencing: after ~5 reports, move to optimizing, after ~8 reports ready
-      if (simCounter.current === 4) setPlanPhase("optimizing");
-      if (simCounter.current === 7) {
+      // 4) Plan still LAST: after ~8 fast reports (~7.2s), then optimizing → ready
+      if (simCounter.current === 5) setPlanPhase("optimizing");
+      if (simCounter.current === 10) {
         setPlan(FULL_PLAN);
         setPlanPhase("ready");
       }
-    }, 1700);
+    }, 900);
     return () => clearInterval(id);
   }, [simulationState, selectedWardCode]);
 

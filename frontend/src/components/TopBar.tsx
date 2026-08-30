@@ -1,10 +1,10 @@
 import { motion } from "framer-motion";
-import { Activity, Clock3, Radio, MapPinned, Play, Pause, RotateCcw } from "lucide-react";
+import { Activity, Clock3, Radio, MapPinned, Play, Pause, RotateCcw, Truck } from "lucide-react";
 import { useCurrentTime } from "../hooks/useCurrentTime";
 import { usePrism } from "../store/PrismContext";
 import { PrismLogo } from "./PrismLogo";
 
-export function TopBar() {
+export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void; view?: string }) {
   const now = useCurrentTime();
   const { simulationState, setSimulationState } = usePrism();
 
@@ -16,13 +16,13 @@ export function TopBar() {
       background: "linear-gradient(90deg,#080A0B 0%, #0A0F0F 100%)",
       borderBottom: "1px solid var(--border)",
       borderTop: "1.5px solid rgba(204,255,0,0.35)",
-      padding: "0 14px",
+      padding: "0 10px 0 14px",
       zIndex: 20,
       position: "relative",
     }}>
       <div style={{ position: "absolute", left: 0, right: 0, top: -1, height: 1, background: "linear-gradient(90deg, transparent, rgba(204,255,0,0.55), transparent)", opacity: 0.7, pointerEvents: "none" }} />
-      {/* Left: Identity */}
-      <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
+      {/* Left: Identity + Resources button on top of menu */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 36, height: 36, display: "grid", placeItems: "center", background: "rgba(204,255,0,0.08)", border: "1px solid rgba(204,255,0,0.2)", borderRadius: 4 }}>
             <PrismLogo size={26} />
@@ -38,7 +38,21 @@ export function TopBar() {
           </div>
         </div>
 
-        <div style={{ width: 1, height: 28, background: "var(--border)", marginLeft: 6 }} />
+        <button
+          onClick={onOpenResources}
+          className="mono"
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 4, cursor: "pointer",
+            background: view === "resources" ? "var(--lime)" : "rgba(204,255,0,0.08)",
+            color: view === "resources" ? "#050607" : "var(--lime)",
+            border: view === "resources" ? "1px solid var(--lime)" : "1px solid var(--lime-border)",
+            fontSize: 10, fontWeight: 800, letterSpacing: "0.1em",
+          }}
+        >
+          <Truck size={12} /> RESOURCES {view === "resources" ? "• OPEN" : ""}
+        </button>
+
+        <div style={{ width: 1, height: 28, background: "var(--border)", marginLeft: 4 }} />
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{

@@ -13,6 +13,7 @@ export function MapView() {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hoverWard, setHoverWard] = useState<{ code: string; name: string; area: string } | null>(null);
+  const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const { selectedWardCode, selectWard, selectIncident, incidents } = usePrism();
 
   // keep last selected for fly-to incident
@@ -43,16 +44,16 @@ export function MapView() {
 
     map.on("load", async () => {
       try {
-        // cinematic transition GLOBAL → INDIA → ASSAM → GUWAHATI (total ~4s)
+        // Slow globe cinematic: true Earth → Guwahati (total ~6.2s, eased)
         setPhase("global");
-        map.flyTo({ ...GUWAHATI_CAMERA.india, duration: 900, essential: true });
-        await delay(950);
+        map.flyTo({ ...GUWAHATI_CAMERA.india, duration: 2100, essential: true, curve: 1.42, easing: (t: number) => 1 - Math.pow(1 - t, 3) });
+        await delay(2200);
         setPhase("india");
-        map.flyTo({ ...GUWAHATI_CAMERA.assam, duration: 900, essential: true });
-        await delay(950);
+        map.flyTo({ ...GUWAHATI_CAMERA.assam, duration: 2000, essential: true, curve: 1.35, easing: (t: number) => 1 - Math.pow(1 - t, 3) });
+        await delay(2100);
         setPhase("assam");
-        map.flyTo({ ...GUWAHATI_CAMERA.guwahati, duration: 1300, essential: true });
-        await delay(1350);
+        map.flyTo({ ...GUWAHATI_CAMERA.guwahati, duration: 2400, essential: true, curve: 1.25, easing: (t: number) => 1 - Math.pow(1 - t, 3) });
+        await delay(2500);
         setPhase("guwahati");
 
         // Load wards geojson
@@ -184,6 +185,11 @@ export function MapView() {
           const rawArea = (props as Record<string, unknown>)["st_area(shape)"] as number | undefined;
           const areaKm = rawArea ? (rawArea / 1_000_000).toFixed(2) + " km²" : "";
           const wardNameShort = name.replace("Guwahati (M Corp.) - ", "");
+          // cursor position for tooltip (client pixel relative to container)
+          const rect = (map.getContainer() as HTMLElement).getBoundingClientRect();
+          setCursor({ x: e.point.x, y: e.point.y });
+          // also keep legacy rect for future use if needed
+          void rect;
           if (code !== hoverWard?.code) {
             setHoverWard({ code, name: wardNameShort, area: areaKm });
             map.setFilter("wards-fill-hover", ["==", ["get", "ward_lgd_code"], Number(code)]);
@@ -193,6 +199,7 @@ export function MapView() {
 
         map.on("mouseleave", "wards-fill", () => {
           setHoverWard(null);
+          setCursor(null);
           map.setFilter("wards-fill-hover", ["==", ["get", "ward_lgd_code"], -1]);
           map.getCanvas().style.cursor = "";
         });
@@ -255,32 +262,32 @@ export function MapView() {
     }
   }, [selectedWardCode, loaded]);
 
-  // Replay flight
+  // Replay flight (same slow globe curve)
   const replay = () => {
     const map = mapRef.current;
     if (!map) return;
     setPhase("global");
-    map.flyTo({ ...GUWAHATI_CAMERA.global, duration: 500, essential: true });
-    setTimeout(() => { setPhase("india"); map.flyTo({ ...GUWAHATI_CAMERA.india, duration: 800, essential: true }); }, 600);
-    setTimeout(() => { setPhase("assam"); map.flyTo({ ...GUWAHATI_CAMERA.assam, duration: 800, essential: true }); }, 1500);
-    setTimeout(() => { setPhase("guwahati"); map.flyTo({ ...GUWAHATI_CAMERA.guwahati, duration: 1100, essential: true }); }, 2400);
+    map.flyTo({ ...GUWAHATI_CAMERA.global, duration: 600, essential: true });
+    setTimeout(() => { setPhase("india"); map.flyTo({ ...GUWAHATI_CAMERA.india, duration: 1900, essential: true, curve: 1.42 } as never); }, 650);
+    setTimeout(() => { setPhase("assam"); map.flyTo({ ...GUWAHATI_CAMERA.assam, duration: 1900, essential: true, curve: 1.35 } as never); }, 2650);
+    setTimeout(() => { setPhase("guwahati"); map.flyTo({ ...GUWAHATI_CAMERA.guwahati, duration: 2200, essential: true, curve: 1.25 } as never); }, 4650);
   };
 
   return (
     <div className="map-container">
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
-      <div className="map-fade-edges" />
-      {/* HUD decorations */}
-      <div className="hud-grid" />
-      <div className="hud-scanline" />
-      <div className="hud-vignette" />
-      <div className="hud-crosshair" />
-      {/* outer frame corners */}
-      <div style={{ position: "absolute", inset: 8, border: "1px solid rgba(204,255,0,0.08)", pointerEvents: "none", borderRadius: 2, zIndex: 2 }} />
-      <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 180, height: 2, background: "linear-gradient(90deg, transparent, rgba(204,255,0,0.55), transparent)", pointerEvents: "none", zIndex: 2 }} />
+      <div className="map-fade-edges" style={{ zIndex: 1 }} />
+      {/* HUD decorations — below text */}
+      <div className="hud-grid" style={{ zIndex: 1 }} />
+      <div className="hud-scanline" style={{ zIndex: 1 }} />
+      <div className="hud-vignette" style={{ zIndex: 1 }} />
+      <div className="hud-crosshair" style={{ zIndex: 1 }} />
+      {/* outer frame */}
+      <div style={{ position: "absolute", inset: 8, border: "1px solid rgba(204,255,0,0.08)", pointerEvents: "none", borderRadius: 2, zIndex: 1 }} />
+      <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 180, height: 2, background: "linear-gradient(90deg, transparent, rgba(204,255,0,0.55), transparent)", pointerEvents: "none", zIndex: 1 }} />
 
-      {/* HUD Overlay */}
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+      {/* HUD Overlay — must be ABOVE fade/grid, grid-aligned corners */}
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 4 }}>
         {/* Top-left HUD */}
         <div style={{
           position: "absolute", top: 10, left: 10,
@@ -322,19 +329,38 @@ export function MapView() {
           </span>
         </div>
 
-        {/* Right HUD — ward hover with area */}
+        {/* Right HUD — ward hover with area (corner) */}
         {hoverWard && (
           <div style={{
             position: "absolute", top: 10, right: 10,
             background: "rgba(5,6,7,0.96)", border: "1px solid var(--lime-border)", borderRadius: 4,
             padding: "7px 9px", minWidth: 168,
-            boxShadow: "0 6px 22px rgba(0,0,0,0.55)",
+            boxShadow: "0 6px 22px rgba(0,0,0,0.55)", zIndex: 5,
           }}>
-            <span className="mono" style={{ fontSize: 10, fontWeight: 800, color: "var(--lime)" }}>LGD {hoverWard.code} • {hoverWard.name}</span>
+            <span className="mono" style={{ fontSize: 10, fontWeight: 800, color: selectedWardCode?.toString() === hoverWard.code ? "var(--lime)" : "var(--text)" }}>
+              LGD {hoverWard.code} • {hoverWard.name} {selectedWardCode?.toString() === hoverWard.code ? " ● ACTIVE" : ""}
+            </span>
             <div className="mono" style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 2, display: "flex", gap: 6 }}>
-              <span>{hoverWard.area}</span><span style={{ opacity: 0.3 }}>•</span><span>click to inspect</span>
+              <span>{hoverWard.area}</span><span style={{ opacity: 0.3 }}>•</span><span>{selectedWardCode?.toString() === hoverWard.code ? "selected" : "click to inspect"}</span>
             </div>
-            <div className="mono" style={{ fontSize: 8, color: "var(--text-faint)", marginTop: 3 }}>WARD NO {hoverWard.code.replace(/^690/, "") || hoverWard.code} • area derived from shp</div>
+          </div>
+        )}
+
+        {/* Cursor-anchored tooltip */}
+        {hoverWard && cursor && (
+          <div style={{
+            position: "absolute",
+            left: Math.min(cursor.x + 14, 520),
+            top: Math.min(cursor.y + 14, 420),
+            background: "rgba(5,6,7,0.97)", border: selectedWardCode?.toString() === hoverWard.code ? "1px solid var(--lime)" : "1px solid var(--border)",
+            borderRadius: 4, padding: "6px 8px", pointerEvents: "none", zIndex: 6,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.6)",
+            transform: "translate(0,0)",
+          }}>
+            <div className="mono" style={{ fontSize: 9, fontWeight: 800, color: selectedWardCode?.toString() === hoverWard.code ? "var(--lime)" : "var(--cyan)", letterSpacing: "0.06em" }}>
+              {hoverWard.name.toUpperCase()} {selectedWardCode?.toString() === hoverWard.code ? "— ACTIVE" : ""}
+            </div>
+            <div className="mono" style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 2 }}>Ward No. {hoverWard.code.replace(/^69/, "")} • {hoverWard.area} • {selectedWardCode?.toString() === hoverWard.code ? "selected ward" : "hover"}</div>
           </div>
         )}
       </div>
