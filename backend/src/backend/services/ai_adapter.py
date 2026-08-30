@@ -31,6 +31,8 @@ class AIAdapter:
         self._openai_model = OPENAI_MODEL
         self._openai_base_url = OPENAI_BASE_URL.rstrip("/")
         self._http = httpx.Client(timeout=30.0)
+        self._calls = 0
+        self._tokens_simulated = 0
 
         if self._provider == "openai":
             if not OPENAI_API_KEY:
@@ -43,6 +45,28 @@ class AIAdapter:
                     self._provider = "gemini"
                 except Exception as exc:
                     raise AIAdapterError(f"Failed to init Gemini client: {exc}") from exc
+
+    def enable(self) -> None:
+        """Switch the adapter from demo (precomputed) to live AI calls."""
+        from backend.config import GEMINI_API_KEY, OPENAI_API_KEY, AI_PROVIDER
+        if AI_PROVIDER == "openai":
+            if not OPENAI_API_KEY:
+                raise AIAdapterError("OPENAI_API_KEY is required when AI_PROVIDER=openai")
+            self._provider = "openai"
+        elif GEMINI_API_KEY:
+            try:
+                self._gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+                self._provider = "gemini"
+            except Exception as exc:
+                raise AIAdapterError(f"Failed to init Gemini client: {exc}") from exc
+
+    @property
+    def live(self) -> bool:
+        return (self._provider == "openai" and bool(OPENAI_API_KEY)) or self._gemini_client is not None
+
+    @property
+    def stats(self) -> dict[str, int]:
+        return {"calls": self._calls, "tokens_simulated": self._tokens_simulated}
 
     @property
     def available(self) -> bool:
@@ -114,11 +138,52 @@ class AIAdapter:
         return json.loads(text)
 
     def _generate(self, prompt: str, response_schema: dict[str, Any] | None = None) -> dict[str, Any]:
+        if not self.live:
+            self._calls += 1
+            self._tokens_simulated += 120
+            return self._demo_response(prompt, response_schema)
+        self._calls += 1
+        self._tokens_simulated += 480
         if self._provider == "openai":
             return self._call_openai(prompt, response_schema=response_schema)
         if self._provider == "gemini":
             return self._call_gemini(prompt, response_schema=response_schema)
         raise AIAdapterError("No AI provider configured")
+
+    def _demo_response(self, prompt: str, schema: dict[str, Any] | None) -> dict[str, Any]:
+        # Precomputed deterministic results for demo. Inferred from prompt keywords.
+        p = prompt.lower()
+        if "disaster_type" in p and "severity" in p:
+            # weather/predict prompt
+            return {
+                "disaster_type": "flood",
+                "confidence": 78,
+                "severity": "moderate",
+                "reason": "Demo: precomputed AI result. Live AI inference runs after SIMULATE.",
+            }
+        if "verify" in p or "contradictions" in p:
+            return {
+                "contradictions": [],
+                "corroboration": [],
+                "overall_confidence_note": "demo precomputed",
+            }
+        if "summarize" in p or "situation" in p:
+            return "Demo: 4 active incidents across Guwahati wards. Precomputed summary (AI live after SIMULATE)."
+        if "extract" in p or "structured disaster" in p:
+            return {
+                "event_type": "flood",
+                "severity": 3,
+                "people_affected": 0,
+                "people_trapped": 0,
+                "vulnerable_population": 0,
+                "location_name": "",
+                "lat": 0.0,
+                "lng": 0.0,
+                "evidence": [],
+                "summary": "Demo precomputed analysis.",
+            }
+        # default
+        return {"answer": "Demo precomputed result.", "focus_lat": None, "focus_lng": None, "area_id": None}
 
     def analyze_report(self, raw_text: str, source_type: str) -> dict[str, Any]:
         prompt = (
