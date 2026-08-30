@@ -328,12 +328,12 @@ export function MapView() {
           type: "circle",
           source: "prism-png-resources",
           paint: {
-            "circle-radius": 10,
-            "circle-color": "rgba(0,0,0,0.38)",
-            "circle-blur": 0.72,
-            "circle-translate": [3, 7],
+            "circle-radius": 14,
+            "circle-color": "rgba(0,0,0,0.45)",
+            "circle-blur": 0.85,
+            "circle-translate": [0, 4],
             "circle-translate-anchor": "viewport" as never,
-            "circle-opacity": 0.42,
+            "circle-opacity": 0.55,
           },
         } as unknown as never);
         map.addLayer({
@@ -342,7 +342,7 @@ export function MapView() {
           source: "prism-png-resources",
           layout: {
             "icon-image": ["get", "icon"] as unknown as never,
-            "icon-size": 0.1 as unknown as never,
+            "icon-size": 0.22 as unknown as never,
             "icon-rotate": ["get", "headingAdj"] as unknown as never,
             "icon-rotation-alignment": "map" as unknown as never,
             "icon-pitch-alignment": "viewport" as unknown as never,
@@ -361,6 +361,7 @@ export function MapView() {
             "text-halo-color": "#050607",
             "text-halo-width": 1,
             "icon-opacity": 1,
+            "icon-halo-width": 0,
           },
         } as unknown as never);
         // subtle selected highlight — no extra circles per earlier request, just allow filter-based glow if needed (kept invisible by default)
