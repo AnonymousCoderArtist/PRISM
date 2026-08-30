@@ -30,10 +30,11 @@ function severityColor(s: string): string {
 }
 
 export function WeatherPanel() {
-  const { selectedWardCode, incidents } = usePrism();
+  const { selectedWardCode, incidents, weatherByLocation, simulationState } = usePrism();
   const [prediction, setPrediction] = useState<WeatherPrediction | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [source, setSource] = useState<"idle" | "rest" | "ws">("idle");
 
   const incidentForWard = selectedWardCode
     ? incidents.find(i => i.wardCode === selectedWardCode)
@@ -52,6 +53,7 @@ export function WeatherPanel() {
       .then(data => {
         if (!cancelled) {
           setPrediction(data);
+          setSource("rest");
           setLoading(false);
         }
       })
@@ -65,6 +67,17 @@ export function WeatherPanel() {
       cancelled = true;
     };
   }, [lat, lon]);
+
+  useEffect(() => {
+    if (simulationState !== "running") return;
+    const centerKey = Object.keys(weatherByLocation).find(k => k === "GUWAHATI-CENTER");
+    const match = centerKey ? weatherByLocation[centerKey] : null;
+    if (match) {
+      setPrediction(match);
+      setSource("ws");
+      setError(null);
+    }
+  }, [weatherByLocation, simulationState]);
 
   const primary = prediction?.prediction;
   const weather = prediction?.weather;
@@ -197,6 +210,8 @@ export function WeatherPanel() {
 
       <div className="mono" style={{ fontSize: 8, color: "var(--text-faint)", textAlign: "center", marginTop: 6 }}>
         Source: <span style={{ color: "var(--text-muted)" }}>wttr.in</span> + AI • Generic disaster model (flood / cyclone / heatwave / cold / fire / landslide / quake)
+        {source === "ws" && <span style={{ color: "var(--lime)", marginLeft: 6 }}>● LIVE WS</span>}
+        {source === "rest" && <span style={{ color: "var(--cyan)", marginLeft: 6 }}>● REST</span>}
       </div>
     </div>
   );
