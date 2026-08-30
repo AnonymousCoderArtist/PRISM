@@ -12,6 +12,7 @@ Local-first disaster intelligence backend for PRISM.
 - WebSockets
 - OR-Tools
 - Google GenAI SDK (optional)
+- OpenAI-compatible provider support (optional)
 
 ## Setup
 
@@ -30,8 +31,36 @@ Copy `.env.example` to `.env` and set values as needed.
 | `SIMULATION_SPEED_MS` | Simulation tick interval | `2000` |
 | `GEMINI_API_KEY` | Google AI API key | _(empty = deterministic fallback)_ |
 | `GEMINI_MODEL` | Gemini model name | `gemini-1.5-flash` |
+| `AI_PROVIDER` | AI provider selection | _(empty = auto)_ |
+| `OPENAI_API_KEY` | OpenAI-compatible API key | _(empty)_ |
+| `OPENAI_BASE_URL` | OpenAI-compatible base URL | `https://api.openai.com/v1` |
+| `OPENAI_MODEL` | OpenAI-compatible model name | `gpt-4o-mini` |
 
-> The backend is designed to run without `GEMINI_API_KEY`. If it is missing or the call fails, the system falls back to deterministic structured responses.
+> The backend is designed to run without any AI key. If no provider is configured or the call fails, the system falls back to deterministic structured responses.
+
+### Provider selection rules
+
+- If `AI_PROVIDER=openai`, the backend uses the OpenAI-compatible client.
+- If `GEMINI_API_KEY` is set and `AI_PROVIDER` is not `openai`, the backend uses Gemini.
+- Otherwise, the backend uses deterministic fallback responses.
+
+### Example: OpenAI-compatible local model
+
+```bash
+AI_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+OPENAI_BASE_URL=http://localhost:11434/v1
+OPENAI_MODEL=llama3
+```
+
+### Example: Groq
+
+```bash
+AI_PROVIDER=openai
+OPENAI_API_KEY=gsk_...
+OPENAI_BASE_URL=https://api.groq.com/openai/v1
+OPENAI_MODEL=llama3-8b-8192
+```
 
 ## Run
 
@@ -65,16 +94,20 @@ Interactive docs: `http://localhost:8000/docs`.
 
 ## Testing the AI Adapter
 
-1. Add your key to `.env`:
-   ```bash
-   GEMINI_API_KEY=your-key-here
-   ```
-2. Restart the backend.
-3. Call:
-   ```bash
-   curl -X POST http://localhost:8000/api/intelligence/analyze \
-     -H "Content-Type: application/json" \
-     -d '{"report_id":"R-001"}'
-   ```
+### Gemini
 
-If Gemini is unavailable, the response will be a deterministic fallback derived from the report fields.
+```bash
+curl -X POST http://localhost:8000/api/intelligence/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"report_id":"R-001"}'
+```
+
+### OpenAI-compatible
+
+```bash
+curl -X POST http://localhost:8000/api/intelligence/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"report_id":"R-001"}'
+```
+
+If the configured provider is unavailable, the response will be a deterministic fallback derived from the report fields.

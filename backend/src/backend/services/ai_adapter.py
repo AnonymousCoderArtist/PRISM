@@ -1,12 +1,20 @@
 from __future__ import annotations
 
-import os
+import json
 from typing import Any
 
 from google import genai
 from google.genai import types
+import httpx
 
-from backend.config import GEMINI_API_KEY, GEMINI_MODEL
+from backend.config import (
+    GEMINI_API_KEY,
+    GEMINI_MODEL,
+    AI_PROVIDER,
+    OPENAI_API_KEY,
+    OPENAI_BASE_URL,
+    OPENAI_MODEL,
+)
 
 
 class AIAdapterError(Exception):
@@ -15,20 +23,33 @@ class AIAdapterError(Exception):
 
 class AIAdapter:
     def __init__(self) -> None:
-        self._client = None
-        self._model = GEMINI_MODEL
-        if GEMINI_API_KEY:
-            try:
-                self._client = genai.Client(api_key=GEMINI_API_KEY)
-            except Exception as exc:  # pragma: no cover - optional dependency
-                raise AIAdapterError(f"Failed to init Gemini client: {exc}") from exc
+        self._provider = AI_PROVIDER
+        self._gemini_client = None
+        self._gemini_model = GEMINI_MODEL
+        self._openai_model = OPENAI_MODEL
+        self._openai_base_url = OPENAI_BASE_URL.rstrip("/")
+        self._http = httpx.Client(timeout=30.0)
+
+        if self._provider == "openai":
+            if not OPENAI_API_KEY:
+                raise AIAdapterError("OPENAI_API_KEY is required when AI_PROVIDER=openai")
+        else:
+            # Default to Gemini if GEMINI_API_KEY is present and provider not explicitly set to openai
+            if GEMINI_API_KEY:
+                try:
+                    self._gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+                    self._provider = "gemini"
+                except Exception as exc:
+                    raise AIAdapterError(f"Failed to init Gemini client: {exc}") from exc
 
     @property
     def available(self) -> bool:
-        return self._client is not None
+        if self._provider == "openai":
+            return bool(OPENAI_API_KEY)
+        return self._gemini_client is not None
 
-    def _generate(self, prompt: str, response_schema: dict[str, Any] | None = None) -> dict[str, Any]:
-        if not self._client:
+    def _call_gemini(self, prompt: str, response_schema: dict[str, Any] | None = None) -> dict[str, Any]:
+        if not self._gemini_client:
             raise AIAdapterError("Gemini client not configured")
 
         config = None
@@ -37,15 +58,50 @@ class AIAdapter:
                 response_mime_type="application/json",
                 response_schema=response_schema,
             )
-        resp = self._client.models.generate_content(
-            model=self._model,
+        resp = self._gemini_client.models.generate_content(
+            model=self._gemini_model,
             contents=prompt,
             config=config,
         )
         text = (resp.text or "").strip()
         if not text:
             raise AIAdapterError("Empty response from Gemini")
-        return text
+        return json.loads(text)
+
+    def _call_openai(self, prompt: str, response_schema: dict[str, Any] | None = None) -> dict[str, Any]:
+        if not OPENAI_API_KEY:
+            raise AIAdapterError("OPENAI_API_KEY is not configured")
+
+        headers = {
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        messages = [{"role": "user", "content": prompt}]
+        payload: dict[str, Any] = {
+            "model": self._openai_model,
+            "messages": messages,
+        }
+        if response_schema:
+            payload["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {"name": "output", "schema": response_schema},
+            }
+
+        url = f"{self._openai_base_url}/chat/completions"
+        resp = self._http.post(url, headers=headers, json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+        text = data["choices"][0]["message"]["content"].strip()
+        if not text:
+            raise AIAdapterError("Empty response from OpenAI-compatible provider")
+        return json.loads(text)
+
+    def _generate(self, prompt: str, response_schema: dict[str, Any] | None = None) -> dict[str, Any]:
+        if self._provider == "openai":
+            return self._call_openai(prompt, response_schema=response_schema)
+        if self._provider == "gemini":
+            return self._call_gemini(prompt, response_schema=response_schema)
+        raise AIAdapterError("No AI provider configured")
 
     def analyze_report(self, raw_text: str, source_type: str) -> dict[str, Any]:
         prompt = (
@@ -73,9 +129,7 @@ class AIAdapter:
             "required": ["event_type", "severity", "people_affected", "people_trapped", "vulnerable_population", "location_name", "evidence", "summary"],
         }
         try:
-            raw = self._generate(prompt, response_schema=schema)
-            import json
-            data = json.loads(raw)
+            data = self._generate(prompt, response_schema=schema)
             if not isinstance(data, dict):
                 raise AIAdapterError("Invalid JSON structure")
             return data
@@ -99,9 +153,7 @@ class AIAdapter:
             "required": ["contradictions", "corroboration", "overall_confidence_note"],
         }
         try:
-            raw = self._generate(prompt, response_schema=schema)
-            import json
-            data = json.loads(raw)
+            data = self._generate(prompt, response_schema=schema)
             if not isinstance(data, dict):
                 raise AIAdapterError("Invalid JSON structure")
             return data
@@ -116,11 +168,30 @@ class AIAdapter:
             f"areas={areas}"
         )
         try:
-            resp = self._client.models.generate_content(
-                model=self._model,
-                contents=prompt,
-            )
-            return (resp.text or "").strip()
+            if self._provider == "gemini" and self._gemini_client:
+                resp = self._gemini_client.models.generate_content(
+                    model=self._gemini_model,
+                    contents=prompt,
+                )
+                return (resp.text or "").strip()
+
+            if self._provider == "openai":
+                headers = {
+                    "Authorization": f"Bearer {OPENAI_API_KEY}",
+                    "Content-Type": "application/json",
+                }
+                payload = {
+                    "model": self._openai_model,
+                    "messages": [{"role": "user", "content": prompt}],
+                }
+                url = f"{self._openai_base_url}/chat/completions"
+                resp = self._http.post(url, headers=headers, json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+                text = data["choices"][0]["message"]["content"].strip()
+                return text
+
+            raise AIAdapterError("No AI provider configured for summarization")
         except Exception as exc:
             raise AIAdapterError(f"summarize_situation failed: {exc}") from exc
 
