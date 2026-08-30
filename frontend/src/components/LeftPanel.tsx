@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { AlertTriangle, Truck, Route, Play, Pause, Zap, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Truck, Route, Play, Pause } from "lucide-react";
 import { useState, useEffect } from "react";
 import { usePrism } from "../store/PrismContext";
 import { fetchWeather } from "../services/api";
@@ -90,16 +90,7 @@ export function LeftPanel() {
             </div>
           )}
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-            <div style={{ background: "rgba(204,255,0,0.06)", border: "1px solid var(--lime-border)", borderRadius: 3, padding: "7px 8px" }}>
-              <div className="mono" style={{ fontSize: 8, color: "var(--lime)" }}><Zap size={10} /> OPTIMIZED</div>
-              <div className="mono" style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 2, lineHeight: 1.35 }}>OR-Tools VRP<br />ETA ↓ 22% • 3 routes</div>
-            </div>
-            <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 3, padding: "7px 8px" }}>
-              <div className="mono" style={{ fontSize: 8, color: "var(--text-muted)" }}><ShieldCheck size={10} /> NEXT</div>
-              <div className="mono" style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 2, lineHeight: 1.35 }}>Coverage:<br />7 active units<br />12 total</div>
-            </div>
-          </div>
+          {/* UPCOMING WEATHER — directly under the plan list */}
 
           {/* UPCOMING WEATHER — under plan list */}
           {weather && (

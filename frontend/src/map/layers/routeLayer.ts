@@ -19,11 +19,11 @@ export function ensureRouteLayers(map: maplibregl.Map): void {
     type: "line",
     source: "prism-resource-routes",
     paint: {
-      "line-color": "rgba(0,0,0,0.5)",
-      "line-width": 12,
-      "line-opacity": 0.45,
-      "line-blur": 2,
-      "line-translate": [3, 7],
+      "line-color": "rgba(0,0,0,0.55)",
+      "line-width": 14,
+      "line-opacity": 0.55,
+      "line-blur": 2.4,
+      "line-translate": [3, 8],
       "line-translate-anchor": "viewport" as never,
     },
     layout: { "line-cap": "round", "line-join": "round" } as never,
@@ -44,9 +44,9 @@ export function ensureRouteLayers(map: maplibregl.Map): void {
       ],
       "line-width": [
         "interpolate", ["linear"], ["zoom"],
-        10, 3,
-        13, 5.5,
-        16, 7
+        10, 4,
+        13, 7,
+        16, 9
       ],
       "line-opacity": 1.0,
       "line-dasharray": [1.5, 1.5],

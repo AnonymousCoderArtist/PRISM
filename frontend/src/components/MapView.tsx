@@ -329,7 +329,8 @@ export function MapView() {
         // keep sources for state sync but do NOT add circle/line layers — user wants only GLB models
 
         // ---- PRISM PNG resource layer — high-quality billboards (user requested PNG, no GLB) ----
-        try { ensureRouteLayers(map); } catch { /* ignore */ }
+        // ensureRouteLayers is called later (after buildings) so the route is rendered ON TOP of 3D buildings
+        void 0;
 
         // Load PNG icons (background already removed & cropped to _icon.png)
         const pngDefs: { id: string; url: string }[] = [
@@ -393,44 +394,6 @@ export function MapView() {
             "circle-stroke-color": "#050607",
             "circle-stroke-width": 1.5,
             "circle-opacity": 0.95,
-          },
-        } as unknown as never);
-        // Animated radar ring — pulses outward under each moving resource
-        map.addLayer({
-          id: "prism-png-radar",
-          type: "circle",
-          source: "prism-png-resources",
-          paint: {
-            "circle-radius": [
-              "interpolate", ["linear"], ["zoom"],
-              10, 6,
-              13, 12,
-              16, 20
-            ],
-            "circle-color": [
-              "match", ["get", "kind"],
-              "ambulance", "#FFFFFF",
-              "helicopter", "#CCFF00",
-              "boat", "#48D8FF",
-              "rescue_vehicle", "#F5B942",
-              "#8A9698"
-            ],
-            "circle-opacity": [
-              "interpolate", ["linear"], ["zoom"],
-              10, 0.0,
-              13, 0.18,
-              16, 0.12
-            ],
-            "circle-stroke-width": 1.2,
-            "circle-stroke-color": [
-              "match", ["get", "kind"],
-              "ambulance", "#FFFFFF",
-              "helicopter", "#CCFF00",
-              "boat", "#48D8FF",
-              "rescue_vehicle", "#F5B942",
-              "#8A9698"
-            ],
-            "circle-stroke-opacity": 0.6,
           },
         } as unknown as never);
         map.addLayer({
@@ -673,6 +636,22 @@ export function MapView() {
             }
           } catch { /* ignore polygons error */ }
         })();
+
+        // NOW add the route layer — on top of wards, incidents, buildings, and 3D extrusions
+        try {
+          ensureRouteLayers(map);
+          // Add the PNG icon layer LAST so it sits on top of everything (including the route)
+          if (map.getLayer("prism-png-shadow")) {
+            map.moveLayer("prism-png-shadow", "prism-route-remaining");
+            map.moveLayer("prism-png-dot", "prism-png-shadow");
+            map.moveLayer("prism-png-layer", "prism-png-dot");
+          }
+          // Ensure route is visible on top of all building/road/incident layers
+          if (map.getLayer("prism-route-remaining")) {
+            map.moveLayer("prism-route-shadow", "incidents-circle");
+            map.moveLayer("prism-route-remaining", "prism-route-shadow");
+          }
+        } catch { /* ignore */ }
       } catch (err) {
         setError((err as Error).message);
       }

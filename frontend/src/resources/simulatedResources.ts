@@ -152,6 +152,7 @@ function headingAtProgress(pts: [number, number][], progress: number): number {
  * Loop: base → target → altTarget → base, so the path keeps fanning out across Guwahati.
  */
 export function stepSimulatedResources(prev: PrismResource[], t: number): PrismResource[] {
+  // `t` here is in SECONDS (PrismContext passes `tick * 0.12`). 0.12s per tick at 120ms.
   return prev.map(r => {
     // Stagger: stay available until dispatchDelay seconds elapse, then start moving
     if (r.status === "available") {
@@ -161,7 +162,7 @@ export function stepSimulatedResources(prev: PrismResource[], t: number): PrismR
         const destLng = r.destLon ?? r.lng;
         const curve = curvePoints([home.lng, home.lat], [destLng, destLat]);
         const curveLenDeg = polylineLength(curve);
-        const curveLenKm = curveLenDeg * 111; // ~111 km per degree
+        const curveLenKm = curveLenDeg * 111;
         const etaMin = Math.max(1, Math.round((curveLenKm / Math.max(1, r.speed ?? 20)) * 60));
         return { ...r, status: "en_route" as const, progress: 0, etaMin };
       }

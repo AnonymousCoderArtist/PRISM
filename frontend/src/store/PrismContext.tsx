@@ -274,8 +274,9 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     let tick = 0;
     const id = setInterval(() => {
       tick += 1;
+      const secondsElapsed = tick * 0.12; // each tick is 120ms
       setPrismResources(prev => {
-        const next = stepSimulatedResources(prev, tick);
+        const next = stepSimulatedResources(prev, secondsElapsed);
         setResourceTrails(mprev => {
           const nm = new Map(mprev);
           for (const r of next) {
