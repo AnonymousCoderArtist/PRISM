@@ -2,7 +2,7 @@
 
 PRISM = Post-Disaster Reality Intelligence & Situation Mapping.
 
-Local-first, multi-disaster intelligence and situation-mapping prototype for the Avinya 2026 final round. Focus geography: Guwahati, Assam, India. Disaster model is generic (flood, cyclone, heatwave, cold wave, fire, landslide, earthquake) — not flood-only.
+Local-first, multi-disaster intelligence and situation-mapping platform. Focus geography: Guwahati, Assam, India. Disaster model is generic (flood, cyclone, heatwave, cold wave, fire, landslide, earthquake) — not flood-only.
 
 ## What it does
 
