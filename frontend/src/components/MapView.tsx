@@ -19,6 +19,7 @@ export function MapView() {
   const [hoverWard, setHoverWard] = useState<{ code: string; name: string; area: string } | null>(null);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const [hoverAsset, setHoverAsset] = useState<{ id: string; label: string; kind: string; eta: number; x: number; y: number; lon: number; lat: number; progress: number; destination?: string; destLat?: number; destLon?: number; status?: string } | null>(null);
+  const [hoverIncident, setHoverIncident] = useState<{ id: string; title: string; severity: string; event_type: string; people: number; priority: number; x: number; y: number } | null>(null);
   const { selectedWardCode, selectWard, selectIncident, incidents, movingAssets, simulationState, planPhase, prismResources, resourceTrails, selectedResourceId, selectResource, selectedResource } = usePrism();
   const prismResRef = useRef(prismResources);
   prismResRef.current = prismResources;
@@ -37,6 +38,8 @@ export function MapView() {
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+
+    let signalLossInterval: ReturnType<typeof setInterval> | null = null;
 
     const map = new maplibregl.Map({
       container: containerRef.current,
@@ -89,6 +92,37 @@ export function MapView() {
             "fill-opacity": 0.85,
           },
         });
+
+        // Signal-loss cities — pulsing yellow/amber highlight on silent wards
+        const signalLossGeo = {
+          type: "FeatureCollection",
+          features: [
+            { type: "Feature", properties: { ward: "33" }, geometry: { type: "Polygon", coordinates: [[[91.66, 26.13],[91.69, 26.13],[91.69, 26.16],[91.66, 26.16],[91.66, 26.13]]] } },
+            { type: "Feature", properties: { ward: "41" }, geometry: { type: "Polygon", coordinates: [[[91.75, 26.17],[91.78, 26.17],[91.78, 26.20],[91.75, 26.20],[91.75, 26.17]]] } },
+            { type: "Feature", properties: { ward: "57" }, geometry: { type: "Polygon", coordinates: [[[91.81, 26.12],[91.84, 26.12],[91.84, 26.15],[91.81, 26.15],[91.81, 26.12]]] } },
+          ],
+        } as unknown as never;
+        map.addSource("cities-signal-loss", { type: "geojson", data: signalLossGeo });
+        map.addLayer({
+          id: "cities-signal-loss-fill",
+          type: "fill",
+          source: "cities-signal-loss",
+          paint: {
+            "fill-color": "#F5B942",
+            "fill-opacity": 0.28,
+          },
+        } as unknown as never);
+        map.addLayer({
+          id: "cities-signal-loss-pulse",
+          type: "line",
+          source: "cities-signal-loss",
+          paint: {
+            "line-color": "#F5B942",
+            "line-width": 2,
+            "line-opacity": 0.85,
+            "line-dasharray": [3, 2],
+          },
+        } as unknown as never);
 
         // Highlight fill (hover/selected via filter)
         map.addLayer({
@@ -328,12 +362,24 @@ export function MapView() {
           type: "circle",
           source: "prism-png-resources",
           paint: {
-            "circle-radius": 10,
+            "circle-radius": 8,
             "circle-color": "rgba(0,0,0,0.38)",
             "circle-blur": 0.72,
-            "circle-translate": [3, 7],
+            "circle-translate": [3, 6],
             "circle-translate-anchor": "viewport" as never,
             "circle-opacity": 0.42,
+          },
+        } as unknown as never);
+        map.addLayer({
+          id: "prism-png-dot",
+          type: "circle",
+          source: "prism-png-resources",
+          paint: {
+            "circle-radius": 5,
+            "circle-color": "#CCFF00",
+            "circle-stroke-color": "#050607",
+            "circle-stroke-width": 1.2,
+            "circle-opacity": 0.95,
           },
         } as unknown as never);
         map.addLayer({
@@ -342,7 +388,7 @@ export function MapView() {
           source: "prism-png-resources",
           layout: {
             "icon-image": ["get", "icon"] as unknown as never,
-            "icon-size": 0.1 as unknown as never,
+            "icon-size": 0.12 as unknown as never,
             "icon-rotate": ["get", "headingAdj"] as unknown as never,
             "icon-rotation-alignment": "map" as unknown as never,
             "icon-pitch-alignment": "viewport" as unknown as never,
@@ -378,6 +424,16 @@ export function MapView() {
           },
         } as unknown as never);
         pngReadyRef.current = true;
+
+        // Pulse animation on signal-loss cities
+        let pulseT = 0;
+        signalLossInterval = setInterval(() => {
+          pulseT = (pulseT + 1) % 100;
+          const opacity = 0.28 + 0.25 * Math.abs(Math.sin(pulseT * 0.0628));
+          if (map.getLayer("cities-signal-loss-fill")) {
+            map.setPaintProperty("cities-signal-loss-fill", "fill-opacity", opacity);
+          }
+        }, 80);
 
         // Click handlers for wards
         map.on("mousemove", "wards-fill", (e: maplibregl.MapLayerMouseEvent) => {
@@ -427,6 +483,28 @@ export function MapView() {
             selectWard(inc.wardCode);
             map.flyTo({ center: [inc.lon, inc.lat], zoom: 13, pitch: 48, bearing: -12, duration: 900, essential: true });
           }
+        });
+
+        map.on("mousemove", "incidents-circle", (e: maplibregl.MapLayerMouseEvent) => {
+          if (!e.features?.[0]) return;
+          const p = e.features[0].properties as Record<string, unknown>;
+          const id = String(p.id);
+          const inc = incidentsRef.current.find(i => i.id === id);
+          setHoverIncident({
+            id,
+            title: String(p.title),
+            severity: String(inc?.severity ?? "moderate"),
+            event_type: String(inc?.summary ?? "—"),
+            people: inc?.reports ?? 0,
+            priority: Number(p.priority) || 0,
+            x: e.point.x,
+            y: e.point.y,
+          });
+          map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", "incidents-circle", () => {
+          setHoverIncident(null);
+          map.getCanvas().style.cursor = "";
         });
 
         // legacy moving-circle handlers removed — only GLB models visible per request
@@ -538,6 +616,7 @@ export function MapView() {
     });
 
     return () => {
+      try { if (signalLossInterval) clearInterval(signalLossInterval); } catch { /* ignore */ }
       map.remove();
       mapRef.current = null;
     };
@@ -915,6 +994,24 @@ export function MapView() {
             </div>
             <div className="mono" style={{ fontSize: 7, color: "var(--text-faint)", marginTop: 6, borderTop: "1px dashed var(--border)", paddingTop: 5, display: "flex", justifyContent: "space-between" }}>
               <span>{hoverAsset.kind.toUpperCase()} • click to focus • follows predicted dashed path</span>
+            </div>
+          </div>
+        )}
+        {hoverIncident && (
+          <div style={{
+            position: "absolute",
+            left: Math.min(hoverIncident.x + 14, 520),
+            top: Math.min(hoverIncident.y + 14, 420),
+            background: "rgba(8,12,14,0.98)",
+            border: `1px solid ${hoverIncident.severity === "critical" ? "rgba(255,77,77,0.4)" : hoverIncident.severity === "high" ? "rgba(245,185,66,0.4)" : "rgba(72,216,255,0.4)"}`,
+            borderLeft: `2px solid ${hoverIncident.severity === "critical" ? "#FF4D4D" : hoverIncident.severity === "high" ? "#F5B942" : "#48D8FF"}`,
+            borderRadius: 4, padding: "8px 9px", pointerEvents: "none", zIndex: 6, minWidth: 220,
+            boxShadow: "0 10px 28px rgba(0,0,0,0.55)",
+          }}>
+            <div className="mono" style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.08em", color: "var(--text)" }}>{hoverIncident.title}</div>
+            <div className="mono" style={{ fontSize: 8, color: hoverIncident.severity === "critical" ? "#FF4D4D" : hoverIncident.severity === "high" ? "#F5B942" : "#48D8FF", fontWeight: 800, letterSpacing: "0.1em", marginTop: 4 }}>SEVERITY {hoverIncident.severity.toUpperCase()}</div>
+            <div className="mono" style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 4, lineHeight: 1.4 }}>
+              Type: {hoverIncident.event_type} • Reports: {hoverIncident.people} • Priority: {hoverIncident.priority}
             </div>
           </div>
         )}

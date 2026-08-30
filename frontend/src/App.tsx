@@ -32,7 +32,7 @@ function DashboardShell({ onOpenResources, view }: { onOpenResources: () => void
       <DotPattern width={18} height={18} cr={0.9} className="fill-[rgba(204,255,0,0.08)] opacity-40" />
       <TopBar onOpenResources={onOpenResources} view={view} />
       <LeftPanel />
-      <div className="prism-map panel" style={{ borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)" }}>
+      <div className="prism-map panel">
         <MapView />
       </div>
       <RightPanel />

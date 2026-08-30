@@ -82,7 +82,7 @@ export const mockReports: Report[] = [
 export const mockSources: Source[] = [
   { id: "SRC-01", type: "satellite", label: "Sentinel-2", detail: "Water extent 12m res — Bharalu +1.2km²", time: "09:40", wardCode: 69077, confidence: 0.82 },
   { id: "SRC-02", type: "field", label: "ASDMA Volunteer", detail: "Ground truth — RG Baruah Rd waist-deep", time: "09:41", wardCode: 69077, confidence: 0.91 },
-  { id: "SRC-03", type: "social", label: "@GhyFloodWatch", detail: "4 posts corroborate, 2 images geotagged", time: "09:42", wardCode: 69077, confidence: 0.62 },
+  { id: "SRC-03", type: "social", label: "@GhyIncidentWatch", detail: "4 posts corroborate, 2 images geotagged", time: "09:42", wardCode: 69077, confidence: 0.62 },
   { id: "SRC-04", type: "osm", label: "OSM Roads", detail: "Accessibility: GS Road partial block (12m)", time: "09:36", wardCode: 69092, confidence: 0.74 },
   { id: "SRC-05", type: "official", label: "APDCL", detail: "Feeder F-22 trip, crew dispatched", time: "09:33", wardCode: 69102, confidence: 0.58 },
   { id: "SRC-06", type: "field", label: "NDRF Team 4", detail: "En route to Pandu — ETA 18 min", time: "09:39", wardCode: 69118, confidence: 0.95 },
@@ -129,7 +129,7 @@ export const simReportPool: Omit<Report, "id" | "time">[] = [
 export const simSourcePool: Omit<Source, "id" | "time" | "confidence">[] = [
   { type: "social", label: "X / Local", detail: "Video: water at Commerce College", wardCode: 69077 },
   { type: "field", label: "Ward Officer-1", detail: "Pump station 2/3 online", wardCode: 69077 },
-  { type: "satellite", label: "SAR Flood Map", detail: "Δ extent +0.4km² last 15 min", wardCode: 69077 },
+  { type: "satellite", label: "SAR Anomaly Map", detail: "Δ extent +0.4km² last 15 min", wardCode: 69077 },
   { type: "official", label: "DDMA", detail: "Section 144 in low-lying wards", wardCode: 69118 },
   { type: "field", label: "ASHA-26", detail: "PHC power still out, vaccine cold-chain at risk", wardCode: 69102 },
 ];

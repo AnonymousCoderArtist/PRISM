@@ -20,8 +20,8 @@ export function ensureRouteLayers(map: maplibregl.Map): void {
     source: "prism-resource-routes",
     paint: {
       "line-color": "rgba(0,0,0,0.32)",
-      "line-width": 7,
-      "line-opacity": 0.18,
+      "line-width": 9,
+      "line-opacity": 0.25,
       "line-blur": 1.4,
       "line-translate": [2.5, 5],
       "line-translate-anchor": "viewport" as never,
@@ -35,9 +35,9 @@ export function ensureRouteLayers(map: maplibregl.Map): void {
     source: "prism-resource-routes",
     paint: {
       "line-color": ["match", ["get", "kind"], "ambulance", "rgba(255,255,255,0.85)", "helicopter", "rgba(204,255,0,0.9)", "boat", "rgba(72,216,255,0.85)", "rescue_vehicle", "rgba(245,185,66,0.85)", "rgba(138,150,152,0.6)"],
-      "line-width": 3.5,
-      "line-opacity": 0.9,
-      "line-dasharray": [2, 2],
+      "line-width": 4.5,
+      "line-opacity": 1.0,
+      "line-dasharray": [1.5, 1.5],
     },
     layout: { "line-cap": "round", "line-join": "round" } as never,
   });
