@@ -1,19 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* PRISM Command Centre — Design Tokens */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
 
+/* LŪMEN Swiss editorial — reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* PRISM Command Centre — Design Tokens + Swiss */
 :root {
-  --bg: #050607;
+  --bg: #000000;
   --bg-panel: #0A0D0F;
   --bg-panel-2: #0F1418;
   --bg-elevated: #11191E;
   --bg-elevated-2: #141E24;
-  --border: #1B2428;
-  --border-strong: #243036;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --border-white: rgba(255, 255, 255, 0.80);
+  --grid-line: rgba(255, 255, 255, 0.04);
   --text: #E8ECEB;
   --text-dim: #8A9698;
   --text-muted: #6E7778;
@@ -23,12 +31,17 @@
   --lime-dim: rgba(204,255,0,0.12);
   --lime-dim2: rgba(204,255,0,0.08);
   --lime-border: rgba(204,255,0,0.35);
+  --swiss-accent: #AFDDFF;
+  --swiss-accent-80: rgba(175,221,255,0.80);
+  --swiss-accent-dim: rgba(175,221,255,0.12);
   --cyan: #48D8FF;
   --amber: #F5B942;
   --red: #FF4D4D;
   --purple: #A88BFF;
   --green: #46E09B;
 
+  --font-graphik: 'Graphik LCG', 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --font-manrope: 'Manrope', 'Inter', system-ui, sans-serif;
   --font-sans: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
@@ -36,15 +49,22 @@
   --left-w: 320px;
   --right-w: 360px;
   --bottom-h: 148px;
+
+  /* LŪMEN Swiss editorial — spacing system: 20px mobile, 35px md gutter */
+  --swiss-outer: 20px;
+  --swiss-gutter: 20px;
 }
 
-* { box-sizing: border-box; }
+@media (min-width: 768px) {
+  :root { --swiss-gutter: 35px; }
+}
 
 html, body {
-  margin: 0; padding: 0;
-  background: var(--bg);
+  margin: 0;
+  padding: 0;
+  background: #000;
   color: var(--text);
-  font-family: var(--font-sans);
+  font-family: var(--font-manrope);
   font-size: 13px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -59,21 +79,71 @@ html, body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(1200px 600px at 50% -10%, rgba(204,255,0,0.04), transparent 60%),
-    radial-gradient(900px 500px at 100% 0%, rgba(72,216,255,0.04), transparent 55%),
-    var(--bg);
+  background: #000;
 }
+
+/* LŪMEN font classes */
+.font-graphik { font-family: var(--font-graphik); }
+.font-manrope { font-family: var(--font-manrope); }
+.mono { font-family: var(--font-mono); }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--bg-panel); }
+::-webkit-scrollbar-track { background: #0A0D0F; }
 ::-webkit-scrollbar-thumb { background: #1E2A2E; border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: #26353B; }
 
-.mono { font-family: var(--font-mono); }
+/* LŪMEN keyframes */
+@keyframes lumenFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lumenDrawH { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes lumenDrawV { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes lumenPlusIn { from { opacity: 0; transform: scale(0.6) rotate(-10deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
+@keyframes lumenStaggerIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes scan { 0% { top: 8%; } 100% { top: 92%; } }
+@keyframes drift { 0% { transform: translateX(-1px); } 50% { transform: translateX(1px); } 100% { transform: translateX(-1px); } }
 
-/* Layout */
+.animate-lumen-fade { animation: lumenFadeIn 0.9s ease-out both; }
+.animate-lumen-draw-h { animation: lumenDrawH 0.9s cubic-bezier(0.22,1,0.36,1) both; transform-origin: left; }
+.animate-lumen-draw-v { animation: lumenDrawV 1.1s cubic-bezier(0.22,1,0.36,1) both; transform-origin: top; }
+.animate-lumen-plus { animation: lumenPlusIn 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+.animate-lumen-stagger { animation: lumenStaggerIn 0.6s ease-out both; }
+
+/* LŪMEN Swiss — hero wrapper + grid lines */
+.prism-hero {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  position: relative;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Swiss grid overlay — 12 cols thin hairlines */
+.swiss-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--swiss-gutter);
+  padding: 0 var(--swiss-outer);
+  opacity: 0.05;
+  z-index: 0;
+}
+.swiss-grid > div { border-left: 1px solid rgba(255,255,255,0.9); }
+.swiss-grid > div:last-child { border-right: 1px solid rgba(255,255,255,0.9); }
+.swiss-rule-h {
+  position: absolute;
+  left: var(--swiss-outer);
+  right: var(--swiss-outer);
+  height: 1px;
+  background: var(--grid-line);
+  pointer-events: none;
+}
+
+/* Layout — inside hero, inset by Swiss outer */
 .prism-app {
   display: grid;
   grid-template-rows: var(--header-h) 1fr var(--bottom-h);
@@ -87,6 +157,8 @@ html, body {
   background: transparent;
   overflow: hidden;
   gap: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .prism-header { grid-area: header; }
@@ -95,17 +167,21 @@ html, body {
 .prism-right { grid-area: right; }
 .prism-bottom { grid-area: bottom; }
 
-/* HUD Panel */
+/* HUD Panel — Swiss editorial: border-white/80 hairline, grid lines, dense hierarchy */
 .panel {
   background: linear-gradient(180deg, rgba(17,25,30,0.96), rgba(10,13,15,0.98));
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255,255,255,0.10);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   position: relative;
 }
+.panel-swiss {
+  border: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(180deg, rgba(17,25,30,0.94), rgba(10,13,15,0.97));
+}
 
-/* corner brackets */
+/* corner brackets — lime kept but Swiss restrained */
 .panel::before, .panel::after,
 .prism-map::before, .prism-map::after {
   content: "";
@@ -123,7 +199,7 @@ html, body {
   height: 34px; min-height: 34px;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 10px 0 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--grid-line);
   background: linear-gradient(90deg, rgba(204,255,0,0.06), transparent 55%), var(--bg-panel-2);
   position: relative;
 }
@@ -151,8 +227,8 @@ html, body {
 .map-fade-edges {
   position: absolute; inset: 0; pointer-events: none; z-index: 2;
   background:
-    linear-gradient(90deg, rgba(5,6,7,0.92) 0%, transparent 7%, transparent 93%, rgba(5,6,7,0.92) 100%),
-    linear-gradient(180deg, rgba(5,6,7,0.82) 0%, transparent 9%, transparent 88%, rgba(5,6,7,0.82) 100%);
+    linear-gradient(90deg, rgba(0,0,0,0.92) 0%, transparent 7%, transparent 93%, rgba(0,0,0,0.92) 100%),
+    linear-gradient(180deg, rgba(0,0,0,0.82) 0%, transparent 9%, transparent 88%, rgba(0,0,0,0.82) 100%);
 }
 .map-fade-edges::after {
   content: ""; position: absolute; inset: 0;
@@ -164,12 +240,12 @@ html, body {
   font-size: 9px !important;
   font-family: var(--font-mono) !important;
   letter-spacing: 0.06em;
-  border: 1px solid var(--border);
+  border: 1px solid var(--grid-line);
 }
 .maplibregl-ctrl-attrib a { color: var(--text-dim) !important; }
 .maplibregl-ctrl-group {
   background: rgba(10,13,15,0.95) !important;
-  border: 1px solid var(--border) !important;
+  border: 1px solid var(--grid-line) !important;
 }
 .maplibregl-ctrl-group button { filter: invert(0.85); }
 
@@ -201,7 +277,7 @@ html, body {
 .hud-crosshair::before { left: 50%; top: 0; bottom: 0; width: 1px; transform: translateX(-0.5px); }
 .hud-crosshair::after { top: 50%; left: 0; right: 0; height: 1px; transform: translateY(-0.5px); }
 
-/* Emergency red mode — replaces lime/yellow with red */
+/* Emergency red mode */
 .emergency-active .prism-app { animation: emergencyShake 0.32s ease-in-out infinite alternate; }
 .emergency-active .prism-map { box-shadow: inset 0 0 140px rgba(220, 20, 20, 0.48), 0 0 0 1.2px rgba(255,40,40,0.32); }
 .emergency-active .panel { border-color: rgba(255,60,60,0.28) !important; }
@@ -217,17 +293,14 @@ html, body {
 @keyframes emergencyPulse { 0% { opacity: 0.9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.03); } }
 @keyframes emergencyFlash { 0%,100% { opacity: 1; } 50% { opacity: 0.22; } }
 
-/* Hover & gradients polish — yellow lime only */
-.panel { transition: border-color 0.28s ease, box-shadow 0.28s ease, transform 0.2s ease; background: linear-gradient(180deg, rgba(17,25,30,0.98), rgba(10,13,15,0.99)); }
-.panel:hover { border-color: color-mix(in srgb, var(--lime) 22%, var(--border)); box-shadow: 0 6px 28px rgba(0,0,0,0.45), 0 0 0 1px var(--lime-dim); transform: translateY(-1px); }
+/* Hover & gradients polish */
+.panel { transition: border-color 0.28s ease, box-shadow 0.28s ease, transform 0.2s ease; }
+.panel:hover { border-color: color-mix(in srgb, var(--lime) 22%, rgba(255,255,255,0.08)); box-shadow: 0 6px 28px rgba(0,0,0,0.45), 0 0 0 1px var(--lime-dim); transform: translateY(-1px); }
 .panel-header { background: linear-gradient(90deg, color-mix(in srgb, var(--lime) 8%, transparent), transparent 58%), linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel)); }
 button { transition: filter 0.18s ease, transform 0.12s ease, border-color 0.18s ease, background 0.18s ease; }
-button:hover { filter: brightness(1.08); border-color: color-mix(in srgb, var(--lime) 28%, var(--border)) !important; }
+button:hover { filter: brightness(1.08); border-color: color-mix(in srgb, var(--lime) 28%, rgba(255,255,255,0.08)) !important; }
 button:active { transform: translateY(0.5px) scale(0.99); }
 .mono { transition: color 0.2s ease; }
-
-/* Buttons subtle */
-button:active { transform: translateY(0.5px); }
 
 /* Responsive */
 @media (max-width: 1100px) {
@@ -242,7 +315,3 @@ button:active { transform: translateY(0.5px); }
   }
   .prism-map { height: 440px; min-height: 440px; }
 }
-
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
-@keyframes scan { 0% { top: 8%; } 100% { top: 92%; } }
-@keyframes drift { 0% { transform: translateX(-1px); } 50% { transform: translateX(1px); } 100% { transform: translateX(-1px); } }
