@@ -17,7 +17,7 @@ export const SIMULATED_RESOURCES: PrismResource[] = [
     destLat: 26.1395, destLon: 91.6367,
     origin: { lat: 26.145, lng: 91.735 },
     etaMin: 18,
-    mission: "Flood rescue — Ward 1 Bharalu",
+    mission: "Incident response — Ward 1",
   },
   {
     id: "BOAT-181",
@@ -65,7 +65,7 @@ export const SIMULATED_RESOURCES: PrismResource[] = [
     destLat: 26.1395, destLon: 91.6367,
     origin: { lat: 26.131, lng: 91.712 },
     etaMin: 4,
-    mission: "On-scene stabilisation — Bharalu",
+    mission: "On-scene stabilisation — Ward 1",
   },
   {
     id: "AIR-007",

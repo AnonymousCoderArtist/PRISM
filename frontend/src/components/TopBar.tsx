@@ -33,7 +33,7 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
           <div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
               <span style={{ fontFamily: "var(--font-mono)", fontWeight: 800, letterSpacing: "0.14em", fontSize: 16, color: "var(--text)" }}>PRISM</span>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.16em", color: "var(--text-muted)", borderLeft: "1px solid var(--border-strong)", paddingLeft: 8 }}>POST-DISASTER REALITY INTELLIGENCE</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.16em", color: "var(--text-muted)", paddingLeft: 8 }}>POST-DISASTER REALITY INTELLIGENCE</span>
             </div>
             <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.12em", color: "var(--text-faint)", marginTop: 1, display: "flex", alignItems: "center", gap: 6 }}>
               <MapPinned size={10} /> GUWAHATI — ASSAM — INDIA <span style={{ opacity: 0.4 }}>•</span> SITUATION MAPPING

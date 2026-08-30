@@ -30,7 +30,7 @@ export function RightPanel() {
   const locIncident = hasIncidents ? (selectedWardCode ? incidents.find(i => i.wardCode === selectedWardCode) ?? selected! : selected!) : null;
 
   return (
-    <aside className="panel prism-right" style={{ borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <aside className="panel prism-right" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {/* ===== TOP-RIGHT: REPORTS streaming ===== */}
       <div style={{ display: "flex", flexDirection: "column", height: "42%" , minHeight: 220, borderBottom: "1px solid var(--border)" }}>
         <div className="panel-header">

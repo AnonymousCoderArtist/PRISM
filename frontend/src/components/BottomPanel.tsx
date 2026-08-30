@@ -74,7 +74,7 @@ export function BottomPanel() {
   }), [activity, xLabels, isFlat, accent, accentDim]);
 
   return (
-    <div className="panel prism-bottom" style={{ borderTop: "1px solid var(--border)", borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)", display: "grid", gridTemplateColumns: "1fr 320px", overflow: "hidden" }}>
+    <div className="panel prism-bottom" style={{ borderTop: "1px solid var(--border)", display: "grid", gridTemplateColumns: "1fr 320px", overflow: "hidden" }}>
       {/* Left 70% : Activity Graph */}
       <div style={{ borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div className="panel-header" style={{ background: "var(--bg-panel-2)" }}>
