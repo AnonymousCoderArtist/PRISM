@@ -5,7 +5,7 @@ import { mockIncidents, mockResources, simReportPool, simSourcePool, wardActivit
 import type { PrismResource } from "../resources/resourceTypes";
 import { toPrismResource } from "../resources/resourceTypes";
 import { SIMULATED_RESOURCES, stepSimulatedResources } from "../resources/simulatedResources";
-import { fetchIncidents, fetchReports, fetchPrismResources, wsUrl } from "../services/api";
+import { wsUrl } from "../services/api";
 
 type PlanAssignment = {
   id: string;
@@ -66,8 +66,8 @@ export function PrismProvider({ children }: { children: ReactNode }) {
   const [plan, setPlan] = useState<PlanAssignment[]>([]);
   const [planPhase, setPlanPhase] = useState<PrismContextValue["planPhase"]>("idle");
   const [movingAssets, setMovingAssets] = useState<PrismContextValue["movingAssets"]>([]);
-  // Start hidden — only appear after SIMULATE → plan ready (user request)
-  const [prismResources, setPrismResources] = useState<PrismResource[]>(() => []);
+  // Visible from start — simulated fleet shown immediately, backend updates when available
+  const [prismResources, setPrismResources] = useState<PrismResource[]>(() => SIMULATED_RESOURCES.slice());
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
   const [resourceTrails, setResourceTrails] = useState<Map<string, [number, number][]>>(() => new Map());
 
@@ -359,9 +359,13 @@ export function PrismProvider({ children }: { children: ReactNode }) {
       setPlan([]);
       setPlanPhase("idle");
       setMovingAssets([]);
-      // hide fleet until next dispatch — user request: no boats visible before plan
-      setPrismResources([]);
-      setResourceTrails(new Map());
+      // Reset fleet to simulated default
+      setPrismResources(SIMULATED_RESOURCES.slice());
+      setResourceTrails(() => {
+        const m = new Map<string, [number, number][]>();
+        for (const r of SIMULATED_RESOURCES) m.set(r.id, [[r.lng, r.lat]]);
+        return m;
+      });
       setSelectedResourceId(null);
       setSelectedWardCode(null);
       setSelectedIncidentId(null);

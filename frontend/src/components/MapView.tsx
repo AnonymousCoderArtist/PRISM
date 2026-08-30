@@ -3,7 +3,6 @@ import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { DARK_STYLE, GUWAHATI_CAMERA, WARD_FILL } from "../lib/mapStyle";
 import { usePrism } from "../store/PrismContext";
-import { EmergencyBanner } from "./EmergencyBanner";
 import { ensureRouteLayers, updateRoutes } from "../map/layers/routeLayer";
 
 const WARDS_URL = "/data/guwahati/geojson/wards_guwahati.geojson";
@@ -19,14 +18,13 @@ export function MapView() {
   const [hoverWard, setHoverWard] = useState<{ code: string; name: string; area: string } | null>(null);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const [hoverAsset, setHoverAsset] = useState<{ id: string; label: string; kind: string; eta: number; x: number; y: number; lon: number; lat: number; progress: number; destination?: string; destLat?: number; destLon?: number; status?: string } | null>(null);
-  const { selectedWardCode, selectWard, selectIncident, incidents, movingAssets, simulationState, planPhase, prismResources, resourceTrails, selectedResourceId, selectResource, selectedResource } = usePrism();
+  const { selectedWardCode, selectWard, selectIncident, incidents, movingAssets, planPhase, prismResources, resourceTrails, selectedResourceId, selectResource, selectedResource } = usePrism();
   const prismResRef = useRef(prismResources);
   prismResRef.current = prismResources;
   const selectedResIdRef = useRef(selectedResourceId);
   selectedResIdRef.current = selectedResourceId;
   const FILL = WARD_FILL;
   const pngReadyRef = useRef(false);
-  const isEmergency = simulationState === "running" && (planPhase === "connecting" || planPhase === "collecting" || planPhase === "verifying" || planPhase === "optimizing");
   const isDispatched = planPhase === "ready";
 
   // keep last selected for fly-to incident
@@ -306,7 +304,7 @@ export function MapView() {
         for (const d of pngDefs) {
           try {
             const img = await loadImg(d.url);
-            if (!map.hasImage(d.id)) map.addImage(d.id, img as unknown as HTMLImageElement, { pixelRatio: 2 } as never);
+            if (!map.hasImage(d.id)) map.addImage(d.id, img as unknown as HTMLImageElement);
           } catch (e) {
             console.warn(`[PNG] failed ${d.url}`, e);
             // fallback via map.loadImage (callback style)
@@ -322,44 +320,49 @@ export function MapView() {
         }
         // GeoJSON source for PNG billboards
         map.addSource("prism-png-resources", { type: "geojson", data: { type: "FeatureCollection", features: [] } as unknown as never });
-        // Shadow for 3D lift — soft drop shadow under each PNG billboard (no stretch, original aspect)
+        // Soft shadow under each resource
         map.addLayer({
           id: "prism-png-shadow",
           type: "circle",
           source: "prism-png-resources",
           paint: {
-            "circle-radius": 10,
-            "circle-color": "rgba(0,0,0,0.38)",
-            "circle-blur": 0.72,
-            "circle-translate": [3, 7],
+            "circle-radius": 5,
+            "circle-color": "rgba(5,6,7,0.5)",
+            "circle-blur": 0.8,
+            "circle-translate": [2, 4],
             "circle-translate-anchor": "viewport" as never,
-            "circle-opacity": 0.42,
+            "circle-opacity": 0.6,
           },
         } as unknown as never);
+        // Visible dot fallback under each resource
+        map.addLayer({
+          id: "prism-png-dot",
+          type: "circle",
+          source: "prism-png-resources",
+          paint: {
+            "circle-radius": 3.5,
+            "circle-color": ["match", ["get", "kind"], "ambulance", "#FFFFFF", "helicopter", "#CCFF00", "boat", "#48D8FF", "rescue_vehicle", "#F5B942", "#8A9698"],
+            "circle-stroke-color": "#050607",
+            "circle-stroke-width": 1,
+            "circle-opacity": 0.95,
+          },
+        } as unknown as never);
+        // PNG billboard — fixed small size, no zoom interpolation
         map.addLayer({
           id: "prism-png-layer",
           type: "symbol",
           source: "prism-png-resources",
           layout: {
             "icon-image": ["get", "icon"] as unknown as never,
-            "icon-size": 0.1 as unknown as never,
+            "icon-size": 0.06 as unknown as never,
             "icon-rotate": ["get", "headingAdj"] as unknown as never,
             "icon-rotation-alignment": "map" as unknown as never,
             "icon-pitch-alignment": "viewport" as unknown as never,
             "icon-allow-overlap": true,
             "icon-ignore-placement": true,
             "icon-anchor": "center",
-            "text-field": ["get", "id"] as unknown as never,
-            "text-size": 9,
-            "text-font": ["Open Sans Bold"] as never,
-            "text-offset": [0, 1.15],
-            "text-anchor": "top",
-            "text-allow-overlap": true,
           },
           paint: {
-            "text-color": "#E8ECEB",
-            "text-halo-color": "#050607",
-            "text-halo-width": 1,
             "icon-opacity": 1,
           },
         } as unknown as never);
@@ -784,26 +787,15 @@ export function MapView() {
   return (
     <div className="map-container">
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
-      {isEmergency && <div className="emergency-tint" style={{ zIndex: 2 }} />}
-      {isEmergency && <div className="emergency-pulse" style={{ zIndex: 2 }} />}
-      <EmergencyBanner />
       {isDispatched && (
-        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 3, pointerEvents: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-          <div style={{ background: "rgba(204,255,0,0.96)", border: "2px solid #fff", borderRadius: 999, padding: "6px 14px", display: "inline-flex", alignItems: "center", gap: 8, boxShadow: "0 8px 32px rgba(204,255,0,0.55)" }}>
-            <span className="mono" style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.14em", color: "#050607" }}>DISPATCHED — AMBULANCE & HELI EN ROUTE</span>
+        <div style={{ position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)", zIndex: 3, pointerEvents: "none" }}>
+          <div style={{ background: "var(--bg-panel)", border: "1px solid var(--lime-border)", borderRadius: 3, padding: "5px 12px", display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <span className="mono" style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "var(--lime)" }}>DISPATCHED — RESOURCES EN ROUTE</span>
           </div>
-          <div className="mono" style={{ fontSize: 9, color: "#fff", background: "rgba(5,6,7,0.85)", border: "1px solid rgba(204,255,0,0.35)", padding: "3px 8px", borderRadius: 999 }}>FROM ADMIN HQ • FOLLOW RED/BLUE TRAILS ON MAP • 3D BUILDINGS ON ZOOM</div>
         </div>
       )}
-      <div className="map-fade-edges" style={{ zIndex: 1 }} />
-      {/* HUD decorations — below text */}
-      <div className="hud-grid" style={{ zIndex: 1 }} />
-      <div className="hud-scanline" style={{ zIndex: 1 }} />
-      <div className="hud-vignette" style={{ zIndex: 1 }} />
-      <div className="hud-crosshair" style={{ zIndex: 1 }} />
-      {/* outer frame */}
-      <div style={{ position: "absolute", inset: 8, border: "1px solid rgba(204,255,0,0.08)", pointerEvents: "none", borderRadius: 2, zIndex: 1 }} />
-      <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 180, height: 2, background: "linear-gradient(90deg, transparent, rgba(204,255,0,0.55), transparent)", pointerEvents: "none", zIndex: 1 }} />
+      {/* thin outer frame */}
+      <div style={{ position: "absolute", inset: 6, border: "1px solid var(--border)", pointerEvents: "none", borderRadius: 2, zIndex: 1 }} />
 
       {/* HUD Overlay — must be ABOVE fade/grid, grid-aligned corners */}
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 4 }}>

@@ -34,10 +34,10 @@ export function ensureRouteLayers(map: maplibregl.Map): void {
     type: "line",
     source: "prism-resource-routes",
     paint: {
-      "line-color": ["match", ["get", "kind"], "ambulance", "rgba(255,255,255,0.58)", "helicopter", "rgba(204,255,0,0.68)", "boat", "rgba(72,216,255,0.62)", "rescue_vehicle", "rgba(245,185,66,0.62)", "rgba(138,150,152,0.42)"],
-      "line-width": 2.4,
-      "line-opacity": 0.72,
-      "line-dasharray": [1.6, 1.6],
+      "line-color": ["match", ["get", "kind"], "ambulance", "rgba(255,255,255,0.85)", "helicopter", "rgba(204,255,0,0.9)", "boat", "rgba(72,216,255,0.85)", "rescue_vehicle", "rgba(245,185,66,0.85)", "rgba(138,150,152,0.6)"],
+      "line-width": 3.5,
+      "line-opacity": 0.9,
+      "line-dasharray": [2, 2],
     },
     layout: { "line-cap": "round", "line-join": "round" } as never,
   });

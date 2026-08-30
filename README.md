@@ -22,7 +22,9 @@ PRISM ingests reports, satellite, drone, official and social signals, fuses them
 
 ## Run locally
 
-Two terminals. Backend on `:8000`, frontend on `:5173`. The Vite dev server proxies `/api/*` to the backend so CORS is not needed in development.
+Two terminals. Backend on `:8001`, frontend on `:5173`. The Vite dev server proxies `/api/*` to the backend so CORS is not needed in development.
+
+> **Note:** On some Windows setups port `8000` may be blocked by a stale socket. The project defaults to `8001` for local testing. If you must use `8000`, free the port or run the terminal as Administrator.
 
 ### 1. Backend
 
@@ -31,23 +33,23 @@ cd backend
 uv sync
 copy .env.example .env       # Windows
 # or:  cp .env.example .env  # macOS / Linux
-uv run uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+uv run uvicorn backend.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
 Verify:
 
 ```bash
-curl http://localhost:8000/api/health
+curl http://localhost:8001/api/health
 # -> {"status":"ok", ...}
 
-curl http://localhost:8000/api/incidents
+curl http://localhost:8001/api/incidents
 # -> seeded incidents
 
-curl http://localhost:8000/api/intelligence/predict/26.1445/91.7362
+curl http://localhost:8001/api/intelligence/predict/26.1445/91.7362
 # -> live forecast + AI disaster prediction for Guwahati
 ```
 
-Interactive API docs: <http://localhost:8000/docs>
+Interactive API docs: <http://localhost:8001/docs>
 
 The first run auto-creates `backend/data/prism.db` and seeds 5 areas, 2 incidents, 3 reports, 5 resources.
 
@@ -61,7 +63,7 @@ npm run dev
 
 Open <http://localhost:5173>.
 
-Vite dev server proxies `/api/*` and WebSockets to `http://localhost:8000` (see `frontend/vite.config.ts`). The frontend auto-detects this when `VITE_API_URL` is empty in `frontend/.env.development`.
+Vite dev server proxies `/api/*` and WebSockets to `http://localhost:8001` (see `frontend/vite.config.ts`). The frontend auto-detects this when `VITE_API_URL` is empty in `frontend/.env.development`.
 
 ### 3. Demo workflow
 
@@ -86,10 +88,10 @@ Now run only the backend and it serves both the API and the dashboard:
 
 ```bash
 cd backend
-uv run uvicorn backend.main:app --host 0.0.0.0 --port 8000
+uv run uvicorn backend.main:app --host 0.0.0.0 --port 8001
 ```
 
-Open <http://localhost:8000>.
+Open <http://localhost:8001>.
 
 ## Endpoints
 

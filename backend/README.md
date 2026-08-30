@@ -21,10 +21,10 @@ Local-first disaster intelligence backend for PRISM.
 cd backend
 uv sync
 copy .env.example .env
-uv run uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+uv run uvicorn backend.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
-The API is at <http://localhost:8000>. Interactive docs at <http://localhost:8000/docs>.
+The API is at <http://localhost:8001>. Interactive docs at <http://localhost:8001/docs>.
 
 The first run auto-creates `backend/data/prism.db` and seeds 5 areas, 2 incidents, 3 reports, 5 resources, 2 evidences from `backend/data/demo/`.
 
@@ -89,7 +89,7 @@ mkdir ..\backend\static 2>nul
 xcopy /E /I /Y dist\* ..\backend\static\
 ```
 
-Now `uv run uvicorn backend.main:app --host 0.0.0.0 --port 8000` serves both the API and the SPA at <http://localhost:8000>.
+Now `uv run uvicorn backend.main:app --host 0.0.0.0 --port 8001` serves both the API and the SPA at <http://localhost:8001>.
 
 ## CORS
 
@@ -140,18 +140,18 @@ In production, the SPA is served by FastAPI so CORS is not needed. Edit `src/bac
 
 ```bash
 # health
-curl http://localhost:8000/api/health
+curl http://localhost:8001/api/health
 
 # list incidents
-curl http://localhost:8000/api/incidents
+curl http://localhost:8001/api/incidents
 
 # live weather forecast for Guwahati
-curl http://localhost:8000/api/intelligence/predict/26.1445/91.7362
+curl http://localhost:8001/api/intelligence/predict/26.1445/91.7362
 
 # situation summary (AI — demo response if no key)
-curl -X POST http://localhost:8000/api/intelligence/situation
+curl -X POST http://localhost:8001/api/intelligence/situation
 
 # start simulation, then check status
-curl -X POST http://localhost:8000/api/simulation/start -H "Content-Type: application/json" -d "{}"
-curl http://localhost:8000/api/simulation/status
+curl -X POST http://localhost:8001/api/simulation/start -H "Content-Type: application/json" -d "{}"
+curl http://localhost:8001/api/simulation/status
 ```

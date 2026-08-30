@@ -36,7 +36,7 @@ function Inner({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* MAIN ADMINISTRATION BLOCK — centre */}
-      <div style={{ background: "linear-gradient(135deg, rgba(204,255,0,0.08), rgba(72,216,255,0.06)), var(--bg-elevated)", border: "1px solid var(--lime-border)", borderRadius: 6, padding: "14px 14px", display: "grid", gridTemplateColumns: "280px 1fr 260px", gap: 14, alignItems: "stretch" }}>
+      <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 4, padding: "14px 14px", display: "grid", gridTemplateColumns: "280px 1fr 260px", gap: 14, alignItems: "stretch" }}>
         <div style={{ background: "rgba(5,6,7,0.55)", border: "1px solid var(--border)", borderRadius: 4, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
           <div className="mono" style={{ fontSize: 9, letterSpacing: "0.14em", color: "var(--lime)", display: "flex", alignItems: "center", gap: 6 }}><Home size={12} /> MAIN ADMINISTRATION BLOCK <Building2 size={10} style={{ opacity: 0.6 }} /></div>
           <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)", lineHeight: 1.2 }}>Dispur Secretariat<br />Annex — Guwahati</div>
@@ -102,7 +102,7 @@ function Inner({ onClose }: { onClose: () => void }) {
           <div className="mono" style={{ fontSize: 8, color: "var(--text-faint)", marginTop: 8, textAlign: "center" }}>Source: DDMA / ASDMA public helplines • For display only in MVP • Backend: <span style={{ color: "var(--text-muted)" }}>GET /api/resources</span> will populate live.</div>
         </div>
 
-        <div style={{ background: "linear-gradient(180deg, rgba(204,255,0,0.06), transparent), var(--bg-elevated)", border: "1px solid var(--lime-border)", borderRadius: 4, padding: 10 }}>
+        <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 4, padding: 10 }}>
           <div className="mono" style={{ fontSize: 9, letterSpacing: "0.1em", color: "var(--lime)", fontWeight: 700 }}>OR-TOOLS INTEGRATION READY</div>
           <div className="mono" style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 6, lineHeight: 1.45 }}>
             This inventory feeds the Response Plan (Left panel). When reports stream at <span style={{ color: "var(--lime)" }}>0.75s</span> emergency rate, the solver recomputes assignments last.<br /><br />

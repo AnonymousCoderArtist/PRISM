@@ -118,9 +118,10 @@ function mapResourceType(type: string): Resource["type"] {
 
 function mapResourceStatus(status: string): Resource["status"] {
   const s = status.toLowerCase();
-  if (["available", "deployed", "standby"].includes(s)) {
-    return s as Resource["status"];
-  }
+  if (s === "deployed") return "en_route";
+  if (s === "available") return "available";
+  if (s === "standby") return "available";
+  if (s === "maintenance") return "offline";
   return "available";
 }
 
@@ -224,4 +225,20 @@ export async function fetchAreas(signal?: AbortSignal): Promise<WardProperties[]
   if (!res.ok) throw new Error(`Areas fetch failed: ${res.status}`);
   const data = (await res.json()) as BackendArea[];
   return data.map(toWard);
+}
+
+export interface WeatherForecast {
+  weather_condition: string;
+  rainfall_next_6h_mm: number;
+  rain_probability: number;
+  forecast_risk: number;
+  suspected_disasters: string[];
+}
+
+export async function fetchWeather(lat: number, lon: number, signal?: AbortSignal): Promise<WeatherForecast> {
+  const base = apiBase();
+  const url = base ? `${base}/api/intelligence/weather/${lat}/${lon}` : `/api/intelligence/weather/${lat}/${lon}`;
+  const res = await fetch(url, { signal });
+  if (!res.ok) throw new Error(`Weather fetch failed: ${res.status}`);
+  return (await res.json()) as WeatherForecast;
 }
