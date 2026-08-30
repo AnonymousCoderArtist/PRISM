@@ -17,6 +17,7 @@ export function MapView() {
   const [error, setError] = useState<string | null>(null);
   const [hoverWard, setHoverWard] = useState<{ code: string; name: string; area: string } | null>(null);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
+  const [hoverAsset, setHoverAsset] = useState<{ id: string; label: string; kind: string; eta: number; x: number; y: number } | null>(null);
   const { selectedWardCode, selectWard, selectIncident, incidents, movingAssets, simulationState, planPhase } = usePrism();
   const isEmergency = simulationState === "running" && (planPhase === "connecting" || planPhase === "collecting" || planPhase === "verifying" || planPhase === "optimizing");
   const isDispatched = planPhase === "ready";
@@ -234,16 +235,54 @@ export function MapView() {
           },
         });
 
-        // Moving assets (ambulance/helicopter) — after plan ready
+        // Moving assets (ambulance/helicopter) — after plan ready + trails
         const movingGeo = {
           type: "FeatureCollection",
           features: movingRef.current.map(m => ({
             type: "Feature",
             geometry: { type: "Point", coordinates: [m.lon, m.lat] },
-            properties: { id: m.id, kind: m.kind, label: m.label },
+            properties: { id: m.id, kind: m.kind, label: m.label, eta: (m as unknown as { etaMin?: number }).etaMin ?? 0 },
           })),
         } as unknown as never;
         map.addSource("moving-assets", { type: "geojson", data: movingGeo });
+        // trails behind — one LineString per asset
+        const trailsGeo = {
+          type: "FeatureCollection",
+          features: movingRef.current
+            .filter(m => (m.trail?.length ?? 0) > 1)
+            .map(m => ({
+              type: "Feature",
+              geometry: { type: "LineString", coordinates: (m as unknown as { trail: [number, number][] }).trail },
+              properties: { id: m.id, kind: m.kind },
+            })),
+        } as unknown as never;
+        map.addSource("moving-trails", { type: "geojson", data: trailsGeo });
+
+        // trail line (behind vehicles)
+        map.addLayer({
+          id: "moving-trail",
+          type: "line",
+          source: "moving-trails",
+          paint: {
+            "line-color": ["match", ["get", "kind"], "ambulance", "#FF3B30", "helicopter", "#48D8FF", "#8A9698"],
+            "line-width": ["match", ["get", "kind"], "ambulance", 3.2, "helicopter", 2.6, 2],
+            "line-opacity": 0.88,
+            "line-blur": 0.2,
+          },
+          layout: { "line-cap": "round", "line-join": "round" } as never,
+        });
+        map.addLayer({
+          id: "moving-trail-glow",
+          type: "line",
+          source: "moving-trails",
+          paint: {
+            "line-color": ["match", ["get", "kind"], "ambulance", "#FF6B6B", "helicopter", "#7DD8FF", "#8A9698"],
+            "line-width": 7,
+            "line-opacity": 0.18,
+            "line-blur": 1.2,
+          },
+        });
+
         map.addLayer({
           id: "moving-glow",
           type: "circle",
@@ -260,10 +299,10 @@ export function MapView() {
           type: "circle",
           source: "moving-assets",
           paint: {
-            "circle-radius": 6,
+            "circle-radius": 6.5,
             "circle-color": ["match", ["get", "kind"], "ambulance", "#FF4D4D", "helicopter", "#48D8FF", "#8A9698"],
             "circle-stroke-color": "#E8ECEB",
-            "circle-stroke-width": 1.4,
+            "circle-stroke-width": 1.6,
           },
         });
         map.addLayer({
@@ -274,12 +313,12 @@ export function MapView() {
             "text-field": ["get", "label"],
             "text-size": 8.5,
             "text-font": ["Open Sans Bold"],
-            "text-offset": [0, -1.2],
+            "text-offset": [0, -1.3],
           },
           paint: {
             "text-color": "#E8ECEB",
             "text-halo-color": "#050607",
-            "text-halo-width": 1,
+            "text-halo-width": 1.1,
           },
         });
 
@@ -331,6 +370,26 @@ export function MapView() {
             selectWard(inc.wardCode);
             map.flyTo({ center: [inc.lon, inc.lat], zoom: 13, pitch: 48, bearing: -12, duration: 900, essential: true });
           }
+        });
+
+        // Hover over ambulance/heli → show ETA
+        map.on("mousemove", "moving-circle", (e: maplibregl.MapLayerMouseEvent) => {
+          if (!e.features?.[0]) return;
+          const p = e.features[0].properties as { id: string; label: string; kind: string; eta?: number };
+          const asset = movingRef.current.find(a => a.id === p.id);
+          const eta = asset?.etaMin ?? p.eta ?? 0;
+          setHoverAsset({ id: p.id, label: p.label, kind: p.kind, eta, x: e.point.x, y: e.point.y });
+          map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", "moving-circle", () => {
+          setHoverAsset(null);
+          map.getCanvas().style.cursor = "";
+        });
+        map.on("click", "moving-circle", (e: maplibregl.MapLayerMouseEvent) => {
+          if (!e.features?.[0]) return;
+          const id = (e.features[0].properties as { id: string }).id;
+          const asset = movingRef.current.find(a => a.id === id);
+          if (asset) map.flyTo({ center: [asset.lon, asset.lat], zoom: 14, pitch: 55, bearing: -10, duration: 800, essential: true });
         });
 
         // Fit bounds to Guwahati after load for precise framing
@@ -475,7 +534,7 @@ export function MapView() {
     src.setData(fc as never);
   }, [incidents, loaded]);
 
-  // Keep moving assets in sync — ambulance/helicopter simulation after plan
+  // Keep moving assets in sync — ambulance/helicopter simulation after plan + trails + ETA
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded() || !loaded) return;
@@ -486,10 +545,24 @@ export function MapView() {
       features: movingAssets.map(m => ({
         type: "Feature",
         geometry: { type: "Point", coordinates: [m.lon, m.lat] },
-        properties: { id: m.id, kind: m.kind, label: m.label },
+        properties: { id: m.id, kind: m.kind, label: m.label, eta: m.etaMin },
       })),
     } as unknown as never;
     src.setData(fc as never);
+    const trailSrc = map.getSource("moving-trails") as maplibregl.GeoJSONSource | undefined;
+    if (trailSrc) {
+      const trails = {
+        type: "FeatureCollection",
+        features: movingAssets.filter(m => m.trail.length > 1).map(m => ({
+          type: "Feature",
+          geometry: { type: "LineString", coordinates: m.trail },
+          properties: { id: m.id, kind: m.kind },
+        })),
+      } as unknown as never;
+      trailSrc.setData(trails as never);
+    }
+    // keep ref fresh for hover
+    movingRef.current = movingAssets;
   }, [movingAssets, loaded]);
 
   // Replay flight (same slow globe curve)
@@ -602,6 +675,25 @@ export function MapView() {
               {hoverWard.name.toUpperCase()} {selectedWardCode?.toString() === hoverWard.code ? "— ACTIVE" : ""}
             </div>
             <div className="mono" style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 2 }}>Ward No. {hoverWard.code.replace(/^69/, "")} • {hoverWard.area} • {selectedWardCode?.toString() === hoverWard.code ? "selected ward" : "hover"}</div>
+          </div>
+        )}
+        {hoverAsset && (
+          <div style={{
+            position: "absolute",
+            left: Math.min(hoverAsset.x + 14, 520),
+            top: Math.min(hoverAsset.y + 14, 420),
+            background: hoverAsset.kind === "ambulance" ? "rgba(28,8,8,0.96)" : "rgba(8,18,28,0.96)",
+            border: hoverAsset.kind === "ambulance" ? "1px solid rgba(255,77,77,0.65)" : "1px solid rgba(72,216,255,0.65)",
+            borderRadius: 4, padding: "6px 8px", pointerEvents: "none", zIndex: 6,
+            boxShadow: hoverAsset.kind === "ambulance" ? "0 8px 24px rgba(255,77,77,0.35)" : "0 8px 24px rgba(72,216,255,0.35)",
+          }}>
+            <div className="mono" style={{ fontSize: 9, fontWeight: 800, color: hoverAsset.kind === "ambulance" ? "#FF6B6B" : "#48D8FF", letterSpacing: "0.06em" }}>
+              {hoverAsset.kind === "ambulance" ? "🚑" : "🚁"} {hoverAsset.label} — ETA {hoverAsset.eta} MIN
+            </div>
+            <div className="mono" style={{ fontSize: 8, color: "#E8ECEB", marginTop: 2 }}>
+              {hoverAsset.kind === "ambulance" ? "Ground • 30-40 km/h • trail behind" : "Air • 120 km/h • direct"} • slow realistic
+            </div>
+            <div className="mono" style={{ fontSize: 8, color: "var(--text-faint)", marginTop: 2 }}>Hover keeps updating • click to fly to asset</div>
           </div>
         )}
       </div>

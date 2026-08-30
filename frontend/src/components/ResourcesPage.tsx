@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Ambulance, Truck, Shield, Building2, Utensils, Fuel, Users, BedDouble, HeartPulse, X, MapPinned, Radio } from "lucide-react";
+import { Ambulance, Truck, Shield, Building2, Utensils, Fuel, Users, BedDouble, HeartPulse, X, MapPinned, Radio, Home } from "lucide-react";
 
 const inventory = [
   { icon: Ambulance, label: "AMBULANCES", count: "18", detail: "12 available • 4 deployed • 2 maintenance", color: "var(--red)", sub: "ALS 6 • BLS 12 • 102/108 integration" },
@@ -38,7 +38,7 @@ function Inner({ onClose }: { onClose: () => void }) {
       {/* MAIN ADMINISTRATION BLOCK — centre */}
       <div style={{ background: "linear-gradient(135deg, rgba(204,255,0,0.08), rgba(72,216,255,0.06)), var(--bg-elevated)", border: "1px solid var(--lime-border)", borderRadius: 6, padding: "14px 14px", display: "grid", gridTemplateColumns: "280px 1fr 260px", gap: 14, alignItems: "stretch" }}>
         <div style={{ background: "rgba(5,6,7,0.55)", border: "1px solid var(--border)", borderRadius: 4, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-          <div className="mono" style={{ fontSize: 9, letterSpacing: "0.14em", color: "var(--lime)", display: "flex", alignItems: "center", gap: 6 }}><Building2 size={12} /> MAIN ADMINISTRATION BLOCK</div>
+          <div className="mono" style={{ fontSize: 9, letterSpacing: "0.14em", color: "var(--lime)", display: "flex", alignItems: "center", gap: 6 }}><Home size={12} /> MAIN ADMINISTRATION BLOCK <Building2 size={10} style={{ opacity: 0.6 }} /></div>
           <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text)", lineHeight: 1.2 }}>Dispur Secretariat<br />Annex — Guwahati</div>
           <div className="mono" style={{ fontSize: 9, color: "var(--text-muted)" }}>26.14°N 91.77°E • 24×7 EOC • ASDMA/DDMA joint</div>
           <div style={{ display: "flex", gap: 6, marginTop: 4 }}>

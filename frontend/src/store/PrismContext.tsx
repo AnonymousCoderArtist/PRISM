@@ -26,7 +26,7 @@ type PrismContextValue = AppViewState & {
   plan: PlanAssignment[];
   planReady: boolean;
   planPhase: "idle" | "connecting" | "collecting" | "verifying" | "optimizing" | "ready";
-  movingAssets: { id: string; lon: number; lat: number; label: string; kind: "ambulance" | "helicopter"; progress: number }[];
+  movingAssets: { id: string; lon: number; lat: number; label: string; kind: "ambulance" | "helicopter"; progress: number; trail: [number, number][]; etaMin: number; totalMin: number }[];
   api: {
     reportsEndpoint: "GET /api/reports";
     incidentsEndpoint: "GET /api/incidents";
@@ -174,11 +174,16 @@ export function PrismProvider({ children }: { children: ReactNode }) {
       if (simCounter.current === 10) {
         setPlan(FULL_PLAN);
         setPlanPhase("ready");
-        // kick off asset movement after plan
-        setMovingAssets([
-          { id: "AMB-01", lon: 91.71, lat: 26.135, label: "AMB 01 → Ward 1", kind: "ambulance", progress: 0 },
-          { id: "HELI-01", lon: 91.68, lat: 26.145, label: "HELI 01 → Pandu", kind: "helicopter", progress: 0 },
-        ]);
+        // staggered dispatch one-by-one (realistic), not instant burst
+        setTimeout(() => {
+          setMovingAssets([{ id: "AMB-01", lon: 91.71, lat: 26.135, label: "AMB 01 → Ward 1 (Bharalu)", kind: "ambulance", progress: 0, trail: [[91.71, 26.135]], etaMin: 12, totalMin: 12 }]);
+        }, 420);
+        setTimeout(() => {
+          setMovingAssets(prev => [...prev, { id: "AMB-02", lon: 91.74, lat: 26.128, label: "AMB 02 → Ward 26 (Fatasil)", kind: "ambulance", progress: 0, trail: [[91.74, 26.128]], etaMin: 9, totalMin: 9 }]);
+        }, 2100);
+        setTimeout(() => {
+          setMovingAssets(prev => [...prev, { id: "HELI-01", lon: 91.68, lat: 26.145, label: "HELI 01 → Ward 42 (Pandu)", kind: "helicopter", progress: 0, trail: [[91.68, 26.145]], etaMin: 7, totalMin: 7 }]);
+        }, 3800);
       }
     }, 750); // very fast emergency rate
 
@@ -188,20 +193,30 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     };
   }, [simulationState, selectedWardCode]);
 
-  // moving assets animation after plan ready
+  // moving assets - realistic slow (12 min compressed to ~38s, 7 min heli to ~28s), trail behind
   useEffect(() => {
     if (planPhase !== "ready" || movingAssets.length === 0) return;
     const id = setInterval(() => {
       setMovingAssets(prev => prev.map(a => {
-        const np = (a.progress + 0.028) % 1;
-        // interpolate along mock route: Wards 1 and 42
-        const start: [number, number] = a.kind === "ambulance" ? [91.71, 26.135] : [91.68, 26.145];
-        const end: [number, number] = a.kind === "ambulance" ? [91.6367, 26.1395] : [91.685, 26.168];
-        const lon = start[0] + (end[0] - start[0]) * np;
-        const lat = start[1] + (end[1] - start[1]) * np + Math.sin(np * Math.PI) * 0.004;
-        return { ...a, lon, lat, progress: np };
+        // realistic: ambulance slower than heli; 500km joke avoided — Guwahati wards 2-5km, heli quicker
+        const speed = a.kind === "helicopter" ? 0.0085 : a.kind === "ambulance" && a.id === "AMB-02" ? 0.0062 : 0.0054;
+        const npRaw = a.progress + speed;
+        const np = npRaw > 1 ? 0 : npRaw; // loop after arrival (or hold near end)
+        const looped = npRaw > 1;
+        // per-asset route
+        const route: Record<string, { s: [number, number]; e: [number, number] }> = {
+          "AMB-01": { s: [91.71, 26.135], e: [91.6367, 26.1395] },
+          "AMB-02": { s: [91.74, 26.128], e: [91.720, 26.108] },
+          "HELI-01": { s: [91.68, 26.145], e: [91.685, 26.168] },
+        };
+        const r = route[a.id] ?? { s: [91.71, 26.135] as [number, number], e: [91.6367, 26.1395] as [number, number] };
+        const lon = r.s[0] + (r.e[0] - r.s[0]) * np;
+        const lat = r.s[1] + (r.e[1] - r.s[1]) * np + Math.sin(np * Math.PI) * 0.0055;
+        const nextTrail = looped ? [[r.s[0], r.s[1]] as [number, number]] : [...a.trail, [lon, lat] as [number, number]].slice(-42);
+        const eta = Math.max(1, Math.ceil((1 - np) * a.totalMin));
+        return { ...a, lon, lat, progress: np, trail: nextTrail, etaMin: eta };
       }));
-    }, 90);
+    }, 130);
     return () => clearInterval(id);
   }, [planPhase, movingAssets.length]);
 
