@@ -12,6 +12,7 @@ export type PrismResource = {
   destination?: string; // incident id or label
   destLon?: number;
   destLat?: number;
+  origin?: { lat: number; lng: number };
   etaMin?: number;
   mission?: string;
 };

@@ -208,7 +208,7 @@ export function RightPanel() {
             ))}
           </AnimatePresence>
           <div className="mono" style={{ fontSize: 8, color: "var(--text-faint)", textAlign: "center", padding: "6px 2px", display: "flex", alignItems: "center", gap: 6, justifyContent: "center", border: "1px dashed var(--border)", borderRadius: 3 }}>
-            <Radio size={10} /> WS <span style={{ color: "var(--lime)" }}>/ws/live</span> • sources cascade down — SIM drives flow flawlessly
+            <Radio size={10} /> sources cascade down as reports arrive
           </div>
         </div>
       </div>

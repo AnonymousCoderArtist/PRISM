@@ -76,13 +76,32 @@ export function LeftPanel() {
             </div>
             <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 3, padding: "7px 8px" }}>
               <div className="mono" style={{ fontSize: 8, color: "var(--text-muted)" }}><ShieldCheck size={10} /> NEXT</div>
-              <div className="mono" style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 2, lineHeight: 1.35 }}>Connect to:<br />/api/resources<br />/ws/live</div>
+              <div className="mono" style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 2, lineHeight: 1.35 }}>Coverage:<br />7 active units<br />12 total</div>
             </div>
           </div>
 
-          <div style={{ background: "rgba(168,139,255,0.08)", border: "1px solid rgba(168,139,255,0.22)", borderRadius: 3, padding: "7px 8px", display: "flex", gap: 6 }}>
-            <AlertTriangle size={12} style={{ color: "var(--purple)", flexShrink: 0, marginTop: 1 }} />
-            <span className="mono" style={{ fontSize: 9, color: "var(--text-dim)", lineHeight: 1.4 }}><span style={{ color: "var(--purple)", fontWeight: 700 }}>VOID</span> — Wards 33/41/57 silent — flatline detect.</span>
+          <div style={{ background: "rgba(168,139,255,0.10)", border: "1px solid rgba(168,139,255,0.32)", borderRadius: 4, padding: "10px 11px", display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <AlertTriangle size={14} style={{ color: "var(--purple)", flexShrink: 0 }} />
+              <div>
+                <div className="mono" style={{ fontSize: 10, fontWeight: 800, color: "var(--purple)", letterSpacing: "0.1em" }}>INFORMATION VOID</div>
+                <div className="mono" style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 2, lineHeight: 1.45 }}>Wards 33 / 41 / 57 silent — flatline detected</div>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5 }}>
+              <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 3, padding: "6px 4px", textAlign: "center" }}>
+                <div className="mono" style={{ fontSize: 7, letterSpacing: "0.08em", color: "var(--text-muted)" }}>VOID</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "var(--purple)", lineHeight: 1, marginTop: 2 }}>89</div>
+              </div>
+              <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 3, padding: "6px 4px", textAlign: "center" }}>
+                <div className="mono" style={{ fontSize: 7, letterSpacing: "0.08em", color: "var(--text-muted)" }}>SILENT</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "var(--amber)", lineHeight: 1, marginTop: 2 }}>3</div>
+              </div>
+              <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 3, padding: "6px 4px", textAlign: "center" }}>
+                <div className="mono" style={{ fontSize: 7, letterSpacing: "0.08em", color: "var(--text-muted)" }}>STATUS</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "var(--purple)", lineHeight: 1, marginTop: 2 }}>FLAT</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

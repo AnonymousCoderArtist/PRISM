@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Activity, Clock3, Radio, MapPinned, Play, Pause, RotateCcw, Truck, Home, Route } from "lucide-react";
+import { Clock3, Radio, MapPinned, Play, Pause, RotateCcw, Truck, Home } from "lucide-react";
 import { useCurrentTime } from "../hooks/useCurrentTime";
 import { usePrism } from "../store/PrismContext";
 import { PrismLogo } from "./PrismLogo";
@@ -70,7 +70,7 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
             <span style={{ width: 6, height: 6, borderRadius: 999, background: "var(--lime)", boxShadow: "0 0 8px rgba(204,255,0,0.7)", animation: "pulse 1.6s infinite" }} />
             SIM
           </span>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.1em", color: "var(--text-muted)" }}>WARDS: 60 • LOCAL-FIRST</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.1em", color: "var(--text-muted)" }}>WARD 60 • LOCAL</span>
         </div>
       </div>
 
@@ -132,16 +132,6 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
         <div style={{ display: "flex", alignItems: "center", gap: 6, borderLeft: "1px solid var(--border)", paddingLeft: 10 }}>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.12em", color: "var(--green)", display: "inline-flex", alignItems: "center", gap: 6 }}>
             <Radio size={12} /> LIVE
-          </span>
-          <Activity size={14} style={{ color: "var(--green)" }} />
-          <img
-            src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face&auto=format"
-            alt="Operator"
-            className="h-7 w-7 rounded-full object-cover border border-[rgba(204,255,0,0.22)] shadow-[0_2px_8px_rgba(0,0,0,0.5),0_0_0_1px_rgba(204,255,0,0.15)]"
-            style={{ objectFit: "cover", width: "28px", height: "28px" }}
-          />
-          <span className="hidden md:inline-flex items-center justify-center h-7 w-7 rounded-full bg-[rgba(204,255,0,0.08)] border border-[rgba(204,255,0,0.18)] shadow-[0_2px_8px_rgba(0,0,0,0.4)]" title="Path data">
-            <Route size={12} style={{ color: "var(--lime)" }} />
           </span>
         </div>
       </div>
