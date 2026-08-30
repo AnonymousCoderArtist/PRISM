@@ -18,8 +18,7 @@ export function MapView() {
   const [error, setError] = useState<string | null>(null);
   const [hoverWard, setHoverWard] = useState<{ code: string; name: string; area: string } | null>(null);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
-  const [hoverAsset, setHoverAsset] = useState<{ id: string; label: string; kind: string; eta: number; x: number; y: number; lon: number; lat: number; progress: number } | null>(null);
-  void hoverAsset; void setHoverAsset;
+  const [hoverAsset, setHoverAsset] = useState<{ id: string; label: string; kind: string; eta: number; x: number; y: number; lon: number; lat: number; progress: number; destination?: string; destLat?: number; destLon?: number; status?: string } | null>(null);
   const { selectedWardCode, selectWard, selectIncident, incidents, movingAssets, simulationState, planPhase, prismResources, resourceTrails, selectedResourceId, selectResource, selectedResource } = usePrism();
   const prismResRef = useRef(prismResources);
   prismResRef.current = prismResources;
@@ -323,13 +322,27 @@ export function MapView() {
         }
         // GeoJSON source for PNG billboards
         map.addSource("prism-png-resources", { type: "geojson", data: { type: "FeatureCollection", features: [] } as unknown as never });
+        // Shadow for 3D lift — soft drop shadow under each PNG billboard (no stretch, original aspect)
+        map.addLayer({
+          id: "prism-png-shadow",
+          type: "circle",
+          source: "prism-png-resources",
+          paint: {
+            "circle-radius": 10,
+            "circle-color": "rgba(0,0,0,0.38)",
+            "circle-blur": 0.72,
+            "circle-translate": [3, 7],
+            "circle-translate-anchor": "viewport" as never,
+            "circle-opacity": 0.42,
+          },
+        } as unknown as never);
         map.addLayer({
           id: "prism-png-layer",
           type: "symbol",
           source: "prism-png-resources",
           layout: {
             "icon-image": ["get", "icon"] as unknown as never,
-            "icon-size": 0.18 as unknown as never,
+            "icon-size": 0.1 as unknown as never,
             "icon-rotate": ["get", "headingAdj"] as unknown as never,
             "icon-rotation-alignment": "map" as unknown as never,
             "icon-allow-overlap": true,
@@ -726,7 +739,7 @@ export function MapView() {
     }
   }, [selectedResourceId, selectedResource, loaded]);
 
-  // PNG icon click / hover — clean, no circles except subtle selected halo above
+  // PNG icon hover — show where it's going, destination and ETA
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded || !pngReadyRef.current) return;
@@ -735,28 +748,50 @@ export function MapView() {
       const id = (f?.properties as { id?: string } | undefined)?.id;
       if (id) {
         selectResource(id);
-        // fly slightly handled in selected effect
-        // stop propagation to ward click
         // @ts-ignore
         if (e.originalEvent) (e.originalEvent as MouseEvent).stopPropagation?.();
       }
     };
     const onHover = (e: maplibregl.MapLayerMouseEvent) => {
+      const f = e.features?.[0];
+      const id = (f?.properties as { id?: string } | undefined)?.id;
+      if (!id) return;
+      const r = prismResRef.current.find(x => x.id === id);
+      if (!r) return;
       map.getCanvas().style.cursor = "pointer";
-      // optional: show small tooltip via hoverAsset? keep cursor only for clean look
-      void e;
+      setHoverAsset({
+        id: r.id,
+        label: r.id,
+        kind: r.kind,
+        eta: r.etaMin ?? 0,
+        x: e.point.x,
+        y: e.point.y,
+        lon: r.lng,
+        lat: r.lat,
+        progress: 0,
+        destination: r.destination,
+        destLat: r.destLat,
+        destLon: r.destLon,
+        status: r.status,
+      });
     };
-    const onLeave = () => { map.getCanvas().style.cursor = ""; };
+    const onLeave = () => {
+      map.getCanvas().style.cursor = "";
+      setHoverAsset(null);
+    };
     map.on("click", "prism-png-layer", onClick as never);
     map.on("mousemove", "prism-png-layer", onHover as never);
     map.on("mouseleave", "prism-png-layer", onLeave as never);
-    // also allow clicking selected halo
     map.on("click", "prism-png-selected", onClick as never);
+    map.on("mousemove", "prism-png-selected", onHover as never);
+    map.on("mouseleave", "prism-png-selected", onLeave as never);
     return () => {
       try { map.off("click", "prism-png-layer", onClick as never); } catch { /* ignore */ }
       try { map.off("mousemove", "prism-png-layer", onHover as never); } catch { /* ignore */ }
       try { map.off("mouseleave", "prism-png-layer", onLeave as never); } catch { /* ignore */ }
       try { map.off("click", "prism-png-selected", onClick as never); } catch { /* ignore */ }
+      try { map.off("mousemove", "prism-png-selected", onHover as never); } catch { /* ignore */ }
+      try { map.off("mouseleave", "prism-png-selected", onLeave as never); } catch { /* ignore */ }
     };
   }, [loaded, selectResource]);
 
@@ -877,28 +912,35 @@ export function MapView() {
             position: "absolute",
             left: Math.min(hoverAsset.x + 14, 520),
             top: Math.min(hoverAsset.y + 14, 420),
-            background: hoverAsset.kind === "ambulance" ? "rgba(28,8,8,0.98)" : "rgba(8,18,28,0.98)",
-            border: hoverAsset.kind === "ambulance" ? "1px solid rgba(255,77,77,0.72)" : "1px solid rgba(56,189,248,0.72)",
-            borderRadius: 4, padding: "7px 9px", pointerEvents: "none", zIndex: 6, minWidth: 210,
-            boxShadow: hoverAsset.kind === "ambulance" ? "0 10px 28px rgba(255,77,77,0.42)" : "0 10px 28px rgba(56,189,248,0.42)",
+            background: "rgba(8,12,14,0.98)",
+            border: "1px solid rgba(204,255,0,0.22)",
+            borderLeft: `2px solid ${hoverAsset.status === "en_route" ? "#CCFF00" : hoverAsset.status === "active" ? "#F5B942" : hoverAsset.status === "arrived" ? "#46E09B" : "#4A5254"}`,
+            borderRadius: 4, padding: "8px 9px", pointerEvents: "none", zIndex: 6, minWidth: 228,
+            boxShadow: "0 10px 28px rgba(0,0,0,0.55), 0 0 0 1px rgba(204,255,0,0.06)",
           }}>
-            <div className="mono" style={{ fontSize: 9, fontWeight: 800, color: hoverAsset.kind === "ambulance" ? "#FF6B6B" : "#38bdf8", letterSpacing: "0.06em" }}>
-              {hoverAsset.kind === "ambulance" ? "🚑" : "🚁"} {hoverAsset.label} — ETA {hoverAsset.eta} MIN
+            <div className="mono" style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 6 }}>
+              <span>{hoverAsset.kind === "ambulance" ? "🚑" : hoverAsset.kind === "helicopter" ? "🚁" : hoverAsset.kind === "boat" ? "🛥️" : "🚒"}</span>
+              <span style={{ color: "var(--text)" }}>{hoverAsset.label}</span>
+              <span style={{ fontSize: 7, padding: "2px 5px", borderRadius: 999, background: hoverAsset.status === "en_route" ? "rgba(204,255,0,0.14)" : hoverAsset.status === "active" ? "rgba(245,185,66,0.14)" : "rgba(74,82,84,0.18)", color: hoverAsset.status === "en_route" ? "var(--lime)" : hoverAsset.status === "active" ? "var(--amber)" : "var(--text-muted)", border: `1px solid ${hoverAsset.status === "en_route" ? "rgba(204,255,0,0.28)" : "var(--border)"}` }}>{(hoverAsset.status ?? "unknown").toUpperCase()}</span>
+              <span style={{ marginLeft: "auto", color: hoverAsset.eta ? "var(--lime)" : "var(--text-faint)", fontSize: 8 }}>ETA {hoverAsset.eta ? `${hoverAsset.eta} min` : "—"}</span>
             </div>
-            <div className="mono" style={{ fontSize: 8, color: "#E8ECEB", marginTop: 3, display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <span>📍 {hoverAsset.lat.toFixed(4)}°N {hoverAsset.lon.toFixed(4)}°E</span>
-              <span style={{ opacity: 0.35 }}>•</span>
-              <span>{Math.round(hoverAsset.progress * 100)}% covered</span>
-              <span style={{ opacity: 0.35 }}>•</span>
-              <span style={{ color: hoverAsset.kind === "ambulance" ? "#FF8A8A" : "#7DDDFF" }}>{100 - Math.round(hoverAsset.progress * 100)}% left</span>
+            <div className="mono" style={{ fontSize: 8, color: "var(--text-muted)", marginTop: 5, display: "grid", gap: 3 }}>
+              <div style={{ display: "flex", gap: 6 }}>
+                <span style={{ color: "var(--text-faint)", minWidth: 28 }}>FROM</span>
+                <span style={{ color: "var(--text-dim)" }}>{hoverAsset.lat.toFixed(4)}°N {hoverAsset.lon.toFixed(4)}°E</span>
+                <span style={{ color: "var(--text-faint)" }}>• now</span>
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <span style={{ color: "var(--text-faint)", minWidth: 28 }}>TO</span>
+                <span style={{ color: "var(--lime)" }}>{hoverAsset.destination ?? "— hold —"}</span>
+                {hoverAsset.destLat != null && hoverAsset.destLon != null && (
+                  <span style={{ color: "var(--text-muted)" }}>{hoverAsset.destLat.toFixed(4)}°N {hoverAsset.destLon.toFixed(4)}°E</span>
+                )}
+              </div>
             </div>
-            <div style={{ height: 3, background: "rgba(255,255,255,0.12)", borderRadius: 999, overflow: "hidden", marginTop: 5 }}>
-              <div style={{ width: `${Math.round(hoverAsset.progress * 100)}%`, height: "100%", background: hoverAsset.kind === "ambulance" ? "#FF3B30" : "#06b6d4", transition: "width 0.12s linear" }} />
+            <div className="mono" style={{ fontSize: 7, color: "var(--text-faint)", marginTop: 6, borderTop: "1px dashed var(--border)", paddingTop: 5, display: "flex", justifyContent: "space-between" }}>
+              <span>{hoverAsset.kind.toUpperCase()} • click to focus • follows predicted dashed path</span>
             </div>
-            <div className="mono" style={{ fontSize: 7, color: "var(--text-faint)", marginTop: 4, display: "flex", justifyContent: "space-between" }}>
-              <span>0% HQ</span><span>— curved top trail —</span><span>100% Ward</span>
-            </div>
-            <div className="mono" style={{ fontSize: 7, color: "var(--text-faint)", marginTop: 3 }}>{hoverAsset.kind === "ambulance" ? "Ground 32 km/h • straight-ish line for viz" : "Air 110 km/h • curved top arc"} • hover for live ETA • click to follow</div>
           </div>
         )}
       </div>

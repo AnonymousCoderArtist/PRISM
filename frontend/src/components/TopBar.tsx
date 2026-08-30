@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Activity, Clock3, Radio, MapPinned, Play, Pause, RotateCcw, Truck, Home } from "lucide-react";
+import { Activity, Clock3, Radio, MapPinned, Play, Pause, RotateCcw, Truck, Home, Route } from "lucide-react";
 import { useCurrentTime } from "../hooks/useCurrentTime";
 import { usePrism } from "../store/PrismContext";
 import { PrismLogo } from "./PrismLogo";
@@ -19,12 +19,15 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
       padding: "0 10px 0 14px",
       zIndex: 20,
       position: "relative",
+      overflow: "hidden",
     }}>
       <div style={{ position: "absolute", left: 0, right: 0, top: -1, height: 1, background: "linear-gradient(90deg, transparent, rgba(204,255,0,0.55), transparent)", opacity: 0.7, pointerEvents: "none" }} />
+      {/* subtle dot pattern for 3D depth */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: "radial-gradient(rgba(204,255,0,0.9) 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
       {/* Left: Identity + Resources button on top of menu */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 36, height: 36, display: "grid", placeItems: "center", background: "rgba(204,255,0,0.08)", border: "1px solid rgba(204,255,0,0.2)", borderRadius: 4 }}>
+          <div className="shadow-[0_2px_10px_rgba(204,255,0,0.12),0_1px_2px_rgba(0,0,0,0.6)]" style={{ width: 36, height: 36, display: "grid", placeItems: "center", background: "rgba(204,255,0,0.08)", border: "1px solid rgba(204,255,0,0.2)", borderRadius: 4 }}>
             <PrismLogo size={26} />
           </div>
           <div>
@@ -131,6 +134,17 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
             <Radio size={12} /> LIVE
           </span>
           <Activity size={14} style={{ color: "var(--green)" }} />
+          {/* Operator photo — small, not late, existing style kept */}
+          <img
+            src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face&auto=format"
+            alt="Operator"
+            className="h-7 w-7 rounded-full object-cover border border-[rgba(204,255,0,0.22)] shadow-[0_2px_8px_rgba(0,0,0,0.5),0_0_0_1px_rgba(204,255,0,0.15)]"
+            style={{ objectFit: "cover" }}
+          />
+          {/* Path data icon — small, 3D */}
+          <span className="hidden md:inline-flex items-center justify-center h-7 w-7 rounded-full bg-[rgba(204,255,0,0.08)] border border-[rgba(204,255,0,0.18)] shadow-[0_2px_8px_rgba(0,0,0,0.4)]" title="Path data">
+            <Route size={12} style={{ color: "var(--lime)" }} />
+          </span>
         </div>
       </div>
     </header>
