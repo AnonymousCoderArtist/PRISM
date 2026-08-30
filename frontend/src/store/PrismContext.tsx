@@ -307,6 +307,8 @@ export function PrismProvider({ children }: { children: ReactNode }) {
       setPrismResources([]);
       setResourceTrails(new Map());
       setSelectedResourceId(null);
+      setSelectedWardCode(null);
+      setSelectedIncidentId(null);
     }
   }, [simulationState]);
 
