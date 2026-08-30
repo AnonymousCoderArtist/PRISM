@@ -9,7 +9,7 @@ export function LeftPanel() {
   const { mapMode, setMapMode, simulationState, setSimulationState, plan, planPhase, incidents, selectWard, selectIncident, selectedIncidentId } = usePrism();
 
   return (
-    <aside className="panel prism-left" style={{ borderRight: "1px solid var(--border)", borderLeft: "1px solid var(--border)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <aside className="panel panel-swiss prism-left border-white/80" style={{ borderRight: "1px solid rgba(255,255,255,0.08)", borderLeft: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {/* === PLAN ON TOP — BIGGEST === */}
       <div className="relative" style={{ flex: 1.6, display: "flex", flexDirection: "column", overflow: "hidden", background: "linear-gradient(180deg, rgba(204,255,0,0.04), transparent 22%), var(--bg-panel)" }}>
         <DotPattern width={14} height={14} cr={0.7} className="fill-[rgba(204,255,0,0.07)] opacity-30" />
