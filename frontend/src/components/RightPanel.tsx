@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText, ShieldCheck, Database, Radio } from "lucide-react";
+import { FileText, ShieldCheck, Database, Radio, Truck, Navigation, Clock3, MapPin, X } from "lucide-react";
 import { usePrism } from "../store/PrismContext";
+import { RESOURCE_LABELS, STATUS_COLORS } from "../resources/resourceRegistry";
 
 function ConfidenceBar({ value }: { value: number }) {
   const color = value > 80 ? "var(--green)" : value > 60 ? "var(--lime)" : value > 40 ? "var(--amber)" : "var(--red)";
@@ -16,8 +17,14 @@ function SourceDot({ type }: { type: string }) {
   return <span style={{ width: 7, height: 7, borderRadius: 999, background: col, boxShadow: `0 0 8px ${col}`, display: "inline-block", flexShrink: 0 }} />;
 }
 
+function headingCardinal(deg: number): string {
+  const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  const i = Math.round(((deg % 360) / 45)) % 8;
+  return dirs[(i + 8) % 8] + ` • ${deg.toFixed(0)}°`;
+}
+
 export function RightPanel() {
-  const { incidents, selectedIncidentId, selectIncident, selectedWardCode, reports, sources, simulationState, planPhase } = usePrism();
+  const { incidents, selectedIncidentId, selectIncident, selectedWardCode, reports, sources, simulationState, planPhase, selectedResource, selectResource } = usePrism();
   const hasIncidents = incidents.length > 0;
   const selected = hasIncidents ? (incidents.find(i => i.id === selectedIncidentId) ?? incidents[0]) : null;
   const locIncident = hasIncidents ? (selectedWardCode ? incidents.find(i => i.wardCode === selectedWardCode) ?? selected! : selected!) : null;
@@ -73,6 +80,62 @@ export function RightPanel() {
           </div>
         </div>
       </div>
+
+      {/* ===== RESOURCE INTELLIGENCE (selection-driven) ===== */}
+      {selectedResource && (
+        <div style={{ background: "linear-gradient(180deg, rgba(204,255,0,0.06), transparent 55%), var(--bg-elevated)", borderBottom: "1px solid var(--lime-border)", padding: 10 }}>
+          <div className="mono" style={{ fontSize: 8, letterSpacing: "0.12em", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            <Truck size={11} style={{ color: "var(--lime)" }} /> RESOURCE INTEL — SELECTED
+            <button onClick={() => selectResource(null)} className="mono" style={{ marginLeft: "auto", background: "transparent", border: "1px solid var(--border)", color: "var(--text-muted)", cursor: "pointer", padding: "2px 6px", borderRadius: 3, display: "inline-flex", alignItems: "center", gap: 4, fontSize: 8 }}><X size={10} /> CLEAR</button>
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+            <div>
+              <div className="mono" style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", letterSpacing: "0.04em" }}>{selectedResource.id}</div>
+              <div className="mono" style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: "0.08em" }}>{(RESOURCE_LABELS[selectedResource.kind] ?? selectedResource.kind.toUpperCase())}</div>
+            </div>
+            <span className="mono" style={{
+              fontSize: 8, fontWeight: 800, letterSpacing: "0.10em",
+              color: selectedResource.status === "en_route" ? "#050607" : "#E8ECEB",
+              background: STATUS_COLORS[selectedResource.status] ?? "var(--border)",
+              border: selectedResource.status === "en_route" ? "1px solid #CCFF00" : "1px solid var(--border)",
+              padding: "3px 7px", borderRadius: 999,
+            }}>{selectedResource.status.toUpperCase().replace("_", " ")}</span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 9 }}>
+            <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 3, padding: "6px 7px" }}>
+              <div className="mono" style={{ fontSize: 7, letterSpacing: "0.08em", color: "var(--text-faint)" }}><MapPin size={10} /> TARGET</div>
+              <div className="mono" style={{ fontSize: 11, fontWeight: 700, color: "var(--text)", marginTop: 2 }}>{selectedResource.destination ?? "— HOLD —"}</div>
+              {selectedResource.destLat != null && <div className="mono" style={{ fontSize: 8, color: "var(--text-muted)" }}>{selectedResource.destLat.toFixed(4)}°N {selectedResource.destLon?.toFixed(4)}°E</div>}
+            </div>
+            <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 3, padding: "6px 7px" }}>
+              <div className="mono" style={{ fontSize: 7, letterSpacing: "0.08em", color: "var(--text-faint)" }}><Clock3 size={10} /> ETA</div>
+              <div className="mono" style={{ fontSize: 13, fontWeight: 800, color: selectedResource.status === "en_route" ? "var(--lime)" : "var(--text)", marginTop: 2 }}>{selectedResource.etaMin != null ? `${selectedResource.etaMin} min` : "—"}</div>
+              <div className="mono" style={{ fontSize: 8, color: "var(--text-muted)" }}>{selectedResource.speed ? `${selectedResource.speed} km/h` : ""} {selectedResource.status === "en_route" ? "• en route" : ""}</div>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 6 }}>
+            <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 3, padding: "6px 7px" }}>
+              <div className="mono" style={{ fontSize: 7, color: "var(--text-faint)", letterSpacing: "0.08em" }}><Navigation size={10} /> HEADING</div>
+              <div className="mono" style={{ fontSize: 11, fontWeight: 700, color: "var(--text)" }}>{Math.round(selectedResource.heading)}°</div>
+              <div className="mono" style={{ fontSize: 8, color: "var(--text-muted)" }}>{headingCardinal(selectedResource.heading)}</div>
+            </div>
+            <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 3, padding: "6px 7px" }}>
+              <div className="mono" style={{ fontSize: 7, color: "var(--text-faint)", letterSpacing: "0.08em" }}>CURRENT POSITION</div>
+              <div className="mono" style={{ fontSize: 10, fontWeight: 700, color: "var(--text)" }}>{selectedResource.lat.toFixed(4)}°N</div>
+              <div className="mono" style={{ fontSize: 10, fontWeight: 700, color: "var(--text)" }}>{selectedResource.lng.toFixed(4)}°E</div>
+            </div>
+          </div>
+          {selectedResource.mission && (
+            <div style={{ marginTop: 7, background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 3, padding: "7px 8px" }}>
+              <div className="mono" style={{ fontSize: 7, letterSpacing: "0.08em", color: "var(--text-faint)" }}>MISSION</div>
+              <div className="mono" style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 2, lineHeight: 1.35 }}>{selectedResource.mission}</div>
+            </div>
+          )}
+          <div className="mono" style={{ fontSize: 7, color: "var(--text-faint)", marginTop: 6, display: "flex", justifyContent: "space-between" }}>
+            <span>3D model — {selectedResource.kind}</span><span>click map to change • route shows at zoom ≥ 11.8</span>
+          </div>
+        </div>
+      )}
 
       {/* ===== MIDDLE-RIGHT: CONFIDENCE by location ===== */}
       <div style={{ background: "var(--bg-elevated)", borderBottom: "1px solid var(--border)", padding: 10 }}>

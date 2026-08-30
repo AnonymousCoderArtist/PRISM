@@ -4,6 +4,8 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { DARK_STYLE, GUWAHATI_CAMERA, WARD_FILL } from "../lib/mapStyle";
 import { usePrism } from "../store/PrismContext";
 import { EmergencyBanner } from "./EmergencyBanner";
+import { Resource3DLayer } from "../map/layers/resourceLayer";
+import { ensureRouteLayers, updateRoutes } from "../map/layers/routeLayer";
 
 const WARDS_URL = "/data/guwahati/geojson/wards_guwahati.geojson";
 const ROADS_URL = "/data/guwahati/geojson/roads.geojson";
@@ -18,7 +20,12 @@ export function MapView() {
   const [hoverWard, setHoverWard] = useState<{ code: string; name: string; area: string } | null>(null);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const [hoverAsset, setHoverAsset] = useState<{ id: string; label: string; kind: string; eta: number; x: number; y: number; lon: number; lat: number; progress: number } | null>(null);
-  const { selectedWardCode, selectWard, selectIncident, incidents, movingAssets, simulationState, planPhase } = usePrism();
+  void hoverAsset; void setHoverAsset;
+  const { selectedWardCode, selectWard, selectIncident, incidents, movingAssets, simulationState, planPhase, prismResources, resourceTrails, selectedResourceId, selectResource, selectedResource } = usePrism();
+  const prismResRef = useRef(prismResources);
+  prismResRef.current = prismResources;
+  const selectedResIdRef = useRef(selectedResourceId);
+  selectedResIdRef.current = selectedResourceId;
   const FILL = WARD_FILL;
   const isEmergency = simulationState === "running" && (planPhase === "connecting" || planPhase === "collecting" || planPhase === "verifying" || planPhase === "optimizing");
   const isDispatched = planPhase === "ready";
@@ -28,6 +35,7 @@ export function MapView() {
   incidentsRef.current = incidents;
   const movingRef = useRef(movingAssets);
   movingRef.current = movingAssets;
+  const resourceLayerRef = useRef<Resource3DLayer | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -271,83 +279,32 @@ export function MapView() {
         } as unknown as never;
         map.addSource("moving-trails", { type: "geojson", data: trailsGeo });
 
-        // trail line (covered path) — curved, visible behind vehicles with gradient feel
-        map.addLayer({
-          id: "moving-trail",
-          type: "line",
-          source: "moving-trails",
-          paint: {
-            "line-color": ["match", ["get", "kind"], "ambulance", "#FF3B30", "helicopter", "#2dd4ff", "#8A9698"],
-            "line-width": ["match", ["get", "kind"], "ambulance", 4.2, "helicopter", 3.4, 2.5],
-            "line-opacity": 0.92,
-            "line-blur": 0.18,
-          },
-          layout: { "line-cap": "round", "line-join": "round" } as never,
-        });
-        map.addLayer({
-          id: "moving-trail-glow",
-          type: "line",
-          source: "moving-trails",
-          paint: {
-            "line-color": ["match", ["get", "kind"], "ambulance", "#FF8A8A", "helicopter", "#7DDDFF", "#8A9698"],
-            "line-width": 10,
-            "line-opacity": 0.22,
-            "line-blur": 1.6,
-          },
-        });
-        // remaining dashed path (to show what's left)
+        // LEGACY circles/trails hidden — PRISM now uses only GLB models + predicted dashed route (no circles)
         map.addSource("moving-remaining", { type: "geojson", data: { type: "FeatureCollection", features: [] } as unknown as never });
-        map.addLayer({
-          id: "moving-remaining",
-          type: "line",
-          source: "moving-remaining",
-          paint: {
-            "line-color": ["match", ["get", "kind"], "ambulance", "rgba(255,59,48,0.42)", "helicopter", "rgba(45,212,255,0.42)", "rgba(138,150,152,0.4)"],
-            "line-width": 2.2,
-            "line-opacity": 0.65,
-            "line-dasharray": [1.2, 1.4],
-          },
-        });
+        // keep sources for state sync but do NOT add circle/line layers — user wants only GLB models
 
-        map.addLayer({
-          id: "moving-glow",
-          type: "circle",
-          source: "moving-assets",
-          paint: {
-            "circle-radius": 20,
-            "circle-color": ["match", ["get", "kind"], "ambulance", "#FF4D4D", "helicopter", "#22d3ee", "#8A9698"],
-            "circle-opacity": 0.22,
-            "circle-blur": 0.65,
+        // ---- PRISM 3D resource layers — always visible, fixed screen size (Google Maps style) ----
+        try { ensureRouteLayers(map); } catch { /* ignore */ }
+
+        // 3D models — Three.js custom layer sharing map GL context
+        const rLayer = new Resource3DLayer({
+          onSelect: (id) => {
+            if (id) {
+              // select in store + highlight
+              // use direct store setter via a custom event — store already has selectResource
+              // we defer to outer useEffect sync; here just trigger through window dispatch
+              const ev = new CustomEvent("prism:select-resource", { detail: id });
+              window.dispatchEvent(ev);
+            }
           },
         });
-        map.addLayer({
-          id: "moving-circle",
-          type: "circle",
-          source: "moving-assets",
-          paint: {
-            "circle-radius": 8.5,
-            "circle-color": ["match", ["get", "kind"], "ambulance", "#FF3B30", "helicopter", "#06b6d4", "#8A9698"],
-            "circle-stroke-color": "#ffffff",
-            "circle-stroke-width": 1.8,
-            "circle-opacity": 1,
-          },
-        });
-        map.addLayer({
-          id: "moving-label",
-          type: "symbol",
-          source: "moving-assets",
-          layout: {
-            "text-field": ["get", "label"],
-            "text-size": 8.5,
-            "text-font": ["Open Sans Bold"],
-            "text-offset": [0, -1.3],
-          },
-          paint: {
-            "text-color": "#E8ECEB",
-            "text-halo-color": "#050607",
-            "text-halo-width": 1.1,
-          },
-        });
+        map.addLayer(rLayer as unknown as maplibregl.LayerSpecification);
+        resourceLayerRef.current = rLayer;
+        // initial feed
+        rLayer.setResources(prismResRef.current);
+        if (selectedResIdRef.current) rLayer.setSelected(selectedResIdRef.current);
+
+        // sync fallback 2d data already seeded; routes will be driven by outer effect
 
         // Click handlers for wards
         map.on("mousemove", "wards-fill", (e: maplibregl.MapLayerMouseEvent) => {
@@ -399,28 +356,7 @@ export function MapView() {
           }
         });
 
-        // Hover over ambulance/heli → show ETA + location + progress
-        map.on("mousemove", "moving-circle", (e: maplibregl.MapLayerMouseEvent) => {
-          if (!e.features?.[0]) return;
-          const p = e.features[0].properties as { id: string; label: string; kind: string; eta?: number };
-          const asset = movingRef.current.find(a => a.id === p.id);
-          const eta = asset?.etaMin ?? p.eta ?? 0;
-          const lon = asset?.lon ?? 0;
-          const lat = asset?.lat ?? 0;
-          const prog = asset?.progress ?? 0;
-          setHoverAsset({ id: p.id, label: p.label, kind: p.kind, eta, x: e.point.x, y: e.point.y, lon, lat, progress: prog });
-          map.getCanvas().style.cursor = "pointer";
-        });
-        map.on("mouseleave", "moving-circle", () => {
-          setHoverAsset(null);
-          map.getCanvas().style.cursor = "";
-        });
-        map.on("click", "moving-circle", (e: maplibregl.MapLayerMouseEvent) => {
-          if (!e.features?.[0]) return;
-          const id = (e.features[0].properties as { id: string }).id;
-          const asset = movingRef.current.find(a => a.id === id);
-          if (asset) map.flyTo({ center: [asset.lon, asset.lat], zoom: 14, pitch: 55, bearing: -10, duration: 800, essential: true });
-        });
+        // legacy moving-circle handlers removed — only GLB models visible per request
 
         // Fit bounds to Guwahati after load for precise framing
         const bounds = new maplibregl.LngLatBounds([91.62, 26.06], [91.88, 26.23]);
@@ -654,6 +590,64 @@ export function MapView() {
     }
     movingRef.current = movingAssets;
   }, [movingAssets, loaded]);
+
+  // ---- Prism 3D resources sync (GLB via Three.js custom layer) — fixed screen size, only predicted route ----
+  useEffect(() => {
+    const map = mapRef.current;
+    const layer = resourceLayerRef.current;
+    if (!map || !layer || !loaded) return;
+    layer.setResources(prismResources);
+    try { updateRoutes(map, prismResources, resourceTrails); } catch { /* ignore */ }
+  }, [prismResources, resourceTrails, loaded]);
+
+  useEffect(() => {
+    const layer = resourceLayerRef.current;
+    if (!layer || !loaded) return;
+    layer.setSelected(selectedResourceId);
+    if (selectedResource) {
+      // subtle fly to selected at operational zoom, preserve pitch
+      const map = mapRef.current;
+      if (map) {
+        const curZ = map.getZoom();
+        if (curZ < 12.5) map.flyTo({ center: [selectedResource.lng, selectedResource.lat], zoom: 13.2, pitch: 52, bearing: -10, duration: 700, essential: true });
+      }
+    }
+  }, [selectedResourceId, selectedResource, loaded]);
+
+  // window event bridge from Three.js layer onSelect
+  useEffect(() => {
+    const h = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      if (id) selectResource(id);
+    };
+    window.addEventListener("prism:select-resource" as never, h as never);
+    return () => window.removeEventListener("prism:select-resource" as never, h as never);
+  }, [selectResource]);
+
+  // Map click fallback via lngLat proximity (more reliable than raycaster after projection)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+    const onClick = (e: maplibregl.MapMouseEvent) => {
+      // ignore if clicked on ward feature — ward handler fires first; we check resource hit via proximity
+      const layer = resourceLayerRef.current;
+      if (!layer) return;
+      const hit = layer.hitTestLngLat(e.lngLat.lng, e.lngLat.lat, map.getZoom());
+      if (hit) {
+        selectResource(hit);
+        // highlight on layer
+        layer.setSelected(hit);
+        // also pan slightly
+        // don't fly aggressively to avoid fighting ward click
+        return;
+      }
+      // if clicking map background while a resource selected, keep selection; ward clicks still propagate
+    };
+    map.on("click", onClick);
+    return () => { try { map.off("click", onClick); } catch { /* ignore */ } };
+  }, [loaded, selectResource]);
+
+  // 2d fallback removed — 3D models show at all zooms with fixed screen size
 
   // Replay flight (same slow globe curve)
   const replay = () => {

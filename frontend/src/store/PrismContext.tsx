@@ -2,6 +2,9 @@ import { createContext, useContext, useState, useMemo, useEffect, useRef } from 
 import type { ReactNode } from "react";
 import type { AppViewState, Report, Source, Incident } from "../types/prism";
 import { mockIncidents, mockResources, simReportPool, simSourcePool, wardActivity, globalActivity } from "../data/mock";
+import type { PrismResource } from "../resources/resourceTypes";
+import { toPrismResource } from "../resources/resourceTypes";
+import { SIMULATED_RESOURCES, stepSimulatedResources } from "../resources/simulatedResources";
 
 type PlanAssignment = {
   id: string;
@@ -20,6 +23,11 @@ type PrismContextValue = AppViewState & {
   selectedWardName: string | null;
   incidents: Incident[]; // verification-gated: empty at idle, populates after SIMULATE
   resources: typeof mockResources;
+  prismResources: PrismResource[];
+  selectedResourceId: string | null;
+  selectResource: (id: string | null) => void;
+  resourceTrails: Map<string, [number, number][]>;
+  selectedResource: PrismResource | null;
   reports: Report[];
   sources: Source[];
   activity: number[];
@@ -57,6 +65,13 @@ export function PrismProvider({ children }: { children: ReactNode }) {
   const [plan, setPlan] = useState<PlanAssignment[]>([]);
   const [planPhase, setPlanPhase] = useState<PrismContextValue["planPhase"]>("idle");
   const [movingAssets, setMovingAssets] = useState<PrismContextValue["movingAssets"]>([]);
+  const [prismResources, setPrismResources] = useState<PrismResource[]>(() => SIMULATED_RESOURCES.slice());
+  const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
+  const [resourceTrails, setResourceTrails] = useState<Map<string, [number, number][]>>(() => {
+    const m = new Map<string, [number, number][]>();
+    for (const r of SIMULATED_RESOURCES) m.set(r.id, [[r.lng, r.lat]]);
+    return m;
+  });
 
   const reportIdx = useRef(0);
   const sourceIdx = useRef(0);
@@ -220,6 +235,54 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(id);
   }, [planPhase, movingAssets.length]);
 
+  // ---- 3D resource simulation — backend-ready fallback ----
+  // Try GET /api/resources once; if fails keep simulated data.
+  // Movement tick interpolates via stepSimulatedResources and updates trails.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/resources", { signal: AbortSignal.timeout(1400) });
+        if (!res.ok) throw new Error("no api");
+        const data = await res.json();
+        if (Array.isArray(data) && data.length && !cancelled) {
+          const adapted = (data as unknown[]).map(u => toPrismResource(u)).filter(Boolean) as PrismResource[];
+          if (adapted.length) {
+            setPrismResources(adapted);
+            const m = new Map<string, [number, number][]>();
+            for (const r of adapted) m.set(r.id, [[r.lng, r.lat]]);
+            setResourceTrails(m);
+          }
+        }
+      } catch { /* keep simulated */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let tick = 0;
+    const id = setInterval(() => {
+      tick += 1;
+      setPrismResources(prev => {
+        const next = stepSimulatedResources(prev, tick);
+        // update trails for covered line
+        setResourceTrails(mprev => {
+          const nm = new Map(mprev);
+          for (const r of next) {
+            const cur = nm.get(r.id) ?? [];
+            const last = cur[cur.length - 1];
+            if (!last || last[0] !== r.lng || last[1] !== r.lat) {
+              nm.set(r.id, [...cur, [r.lng, r.lat] as [number, number]].slice(-42));
+            }
+          }
+          return nm;
+        });
+        return next;
+      });
+    }, 120);
+    return () => clearInterval(id);
+  }, []);
+
   useEffect(() => {
     if (simulationState === "idle") {
       reportIdx.current = 0;
@@ -235,6 +298,7 @@ export function PrismProvider({ children }: { children: ReactNode }) {
   }, [simulationState]);
 
   const planReady = planPhase === "ready";
+  const selectedResource = selectedResourceId ? prismResources.find(r => r.id === selectedResourceId) ?? null : null;
 
   const value = useMemo<PrismContextValue>(() => ({
     selectedWardCode,
@@ -248,6 +312,11 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     selectedWardName: selectedWardCode ? incidents.find(i => i.wardCode === selectedWardCode)?.wardName ?? `Ward ${selectedWardCode}` : null,
     incidents,
     resources: mockResources,
+    prismResources,
+    selectedResourceId,
+    selectResource: setSelectedResourceId,
+    resourceTrails,
+    selectedResource,
     reports,
     sources,
     activity,
@@ -261,7 +330,7 @@ export function PrismProvider({ children }: { children: ReactNode }) {
       resourcesEndpoint: "GET /api/resources",
       wsEndpoint: "WS /ws/live",
     },
-  }), [selectedWardCode, selectedIncidentId, mapMode, simulationState, reports, sources, activity, plan, planReady, planPhase, incidents, movingAssets]);
+  }), [selectedWardCode, selectedIncidentId, mapMode, simulationState, reports, sources, activity, plan, planReady, planPhase, incidents, movingAssets, prismResources, selectedResourceId, resourceTrails, selectedResource]);
 
   return <PrismContext.Provider value={value}>{children}</PrismContext.Provider>;
 }
