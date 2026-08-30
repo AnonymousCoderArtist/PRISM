@@ -677,7 +677,14 @@ export function MapView() {
     if (!map || !loaded || !pngReadyRef.current) return;
     const src = map.getSource("prism-png-resources") as maplibregl.GeoJSONSource | undefined;
     if (!src) return;
-    const moving = prismResources.filter(r => r.status === "en_route" || r.status === "active" || r.status === "arrived");
+    // Hidden before planPhase ready — only dispatch from ADMIN HQ 91.752,26.142 after ready
+    if (!isDispatched) {
+      src.setData({ type: "FeatureCollection", features: [] } as unknown as never);
+      try { updateRoutes(map, [], resourceTrails); } catch { /* ignore */ }
+      return;
+    }
+    // Only moving resources shown (en_route/active), not available/offline/arrived
+    const moving = prismResources.filter(r => r.status === "en_route" || r.status === "active");
     const fc = {
       type: "FeatureCollection",
       features: moving.map(r => {
@@ -690,8 +697,8 @@ export function MapView() {
       }),
     } as unknown as never;
     src.setData(fc as never);
-    try { updateRoutes(map, prismResources.filter(r => r.status === "en_route"), resourceTrails); } catch { /* ignore */ }
-  }, [prismResources, resourceTrails, loaded]);
+    try { updateRoutes(map, moving.filter(r => r.status === "en_route"), resourceTrails); } catch { /* ignore */ }
+  }, [prismResources, resourceTrails, loaded, isDispatched]);
 
   useEffect(() => {
     const map = mapRef.current;
