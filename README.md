@@ -13,26 +13,16 @@ PRISM ingests reports, satellite, drone, official and social signals, fuses them
 - Evidence verification and fusion
 - Confidence scoring per incident
 - Area priority scoring
-- Information-void detection with signal-loss highlight
+- Information-void detection
 - OR-Tools resource allocation plan
 - Live operational dashboard (map + panels + WebSocket)
-- Simulated real-time disaster evolution with 12 distinct resources from 8 operational bases
-- Curved 3D resource paths with per-resource speed and heading
+- Simulated real-time disaster evolution
 - Live weather forecasting and AI disaster prediction via wttr.in
 - **Demo mode**: precomputed AI results with zero token consumption; live AI only when SIMULATE is clicked
 
-## What the dashboard does
-
-- **Top bar** — PRISM identity, Guwahati location pill, SIMULATE/PAUSE + RESET, live clock
-- **Left panel — Response Plan** — live plan assignments, upcoming 6h weather, information-void card
-- **Right panel — Incoming Reports + Resource Intel + Confidence + Evidence Sources**
-- **Bottom panel — Activity Graph + Signal Diagnostics** — clicking a signal-loss ward (33 / 41 / 57) forces a flat-line graph and shows "NO SIGNAL" status
-- **Map** — Guwahati wards (60), 3 pulsing signal-loss wards, incidents with severity glow, 12 PNG vehicle icons travelling along curved Bézier routes with per-resource speed
-- **Resources page (top-right toggle)** — full inventory + LIVE DISPATCH list that updates as each unit is dispatched
-
 ## Run locally
 
-Two terminals. Backend on `:8001`, frontend on `:5173`. The Vite dev server proxies `/api/*` and WebSocket upgrades to the backend so CORS is not needed in development.
+Two terminals. Backend on `:8001`, frontend on `:5173`. The Vite dev server proxies `/api/*` to the backend so CORS is not needed in development.
 
 > **Note:** On some Windows setups port `8000` may be blocked by a stale socket. The project defaults to `8001` for local testing. If you must use `8000`, free the port or run the terminal as Administrator.
 
@@ -61,7 +51,7 @@ curl http://localhost:8001/api/intelligence/predict/26.1445/91.7362
 
 Interactive API docs: <http://localhost:8001/docs>
 
-The first run auto-creates `backend/data/prism.db` and seeds 10 areas, 8 incidents, 14 reports, 12 resources, 4 weather watch locations.
+The first run auto-creates `backend/data/prism.db` and seeds 5 areas, 2 incidents, 3 reports, 5 resources.
 
 ### 2. Frontend
 
@@ -77,11 +67,10 @@ Vite dev server proxies `/api/*` and WebSockets to `http://localhost:8001` (see 
 
 ### 3. Demo workflow
 
-1. Open the dashboard. All AI fields are served from precomputed responses (demo mode, no token consumption).
-2. Click **SIMULATE** in the left panel. Reports stream in, the plan builds up, and resources dispatch one by one.
-3. Watch the 12 vehicles (4 boats, 3 ambulances, 2 helicopters, 2 rescue vehicles, 1 excavator) fly out from 8 distinct operational bases (Pandu Ghat, Fatasil Ghat, Guwahati Port, Jalukbari Depot, GMCH, Dispur Hospital, Panbazar Fire Station, Borjhar Airbase, Chandmari, Khanapara, Azara) along curved Bézier paths to their assigned incidents.
-4. Click on a yellow-pulsing signal-loss ward (33 / 41 / 57). The bottom activity graph goes flat, the signal diagnostics panel flips to "VOID CONDITION", and a "NO SIGNAL" tooltip appears.
-5. Click **PAUSE** or **RESET** at any time. RESET clears the fleet and the simulation state.
+1. Open the dashboard — every AI field (incident summary, verification, situation report, weather prediction) is served from precomputed responses. Status pill shows **DEMO · AI NOT INVOKED**.
+2. Click **SIMULATE** in the left panel. The backend calls `POST /api/simulation/start` which initialises the Gemini/OpenAI client (if a key is set in `backend/.env`). Status pill switches to **AI LIVE**.
+3. Watch the reports stream in, the plan build up, resources dispatch, and weather forecasts refresh every 6 ticks across the 4 Guwahati watch locations (Guwahati, Dispur, Pandu, Fatasil).
+4. Click **PAUSE** or **RESET** at any time.
 
 ### 4. Production — single-server build
 
@@ -103,25 +92,6 @@ uv run uvicorn backend.main:app --host 0.0.0.0 --port 8001
 ```
 
 Open <http://localhost:8001>.
-
-## Simulated fleet
-
-12 resources, each with a distinct base, target, alternate target, and speed. After the plan is ready, resources dispatch one by one (staggered ~0.9s per unit) and travel along a quadratic Bézier curve at their real-world speed. On reaching the target, the loop continues to the alternate target, then back to the home base.
-
-| ID | Kind | Base | Target | Alt target | Speed (km/h) |
-| --- | --- | --- | --- | --- | --- |
-| BOAT-174 | boat | Pandu Ghat | Dispur | Maligaon | 45 |
-| BOAT-181 | boat | Fatasil Ghat | Paltan Bazaar | Ganeshguri | 32 |
-| BOAT-192 | boat | Guwahati Port | Six Mile | Paltan Bazaar | 38 |
-| BOAT-205 | boat | Jalukbari | Noonmati | Lokhra | 52 |
-| AMB-021 | ambulance | GMCH | Paltan Bazaar | Bhangagarh | 72 |
-| AMB-014 | ambulance | Dispur Hospital | Maligaon | Lokhra | 42 |
-| AMB-033 | ambulance | Panbazar Fire | Khanapara | Six Mile | 58 |
-| AIR-007 | helicopter | Borjhar Airbase | Six Mile | Bhangagarh | 280 |
-| AIR-011 | helicopter | Azara | Chandmari | Dispur | 320 |
-| RV-009 | rescue_vehicle | Panbazar Fire | Beltola | Dispur | 62 |
-| RV-015 | rescue_vehicle | Khanapara | Khanapara | Jalukbari W | 78 |
-| EXC-002 | rescue_vehicle | Chandmari | Bhangagarh | Paltan Bazaar | 28 |
 
 ## Endpoints
 
@@ -191,16 +161,14 @@ PRISM/
 │   │   └── prism.db          SQLite (created on first run)
 │   ├── static/               Built SPA (optional, see prod steps)
 │   └── pyproject.toml
-├── frontend/                 React + Vite + MapLibre + Framer Motion + ECharts
+├── frontend/                 React + Vite + MapLibre + Framer Motion
 │   ├── src/
-│   │   ├── components/       TopBar, LeftPanel, RightPanel, BottomPanel, MapView, ResourcesPage
+│   │   ├── components/       Dashboard panels
 │   │   ├── store/            PrismContext state
 │   │   ├── services/api.ts   Backend client + WS
 │   │   ├── lib/mapStyle.ts   Map config
-│   │   ├── resources/        Simulated fleet, curve path helpers
-│   │   ├── map/layers/       MapLibre layer setup (routes, etc.)
-│   │   └── index.css         Design tokens (dark + lime)
-│   └── public/data/guwahati/ Local map data + vehicle PNG icons
+│   │   └── index.css         Design tokens
+│   └── public/data/guwahati/ Local map data
 ├── data/guwahati/            Read-only canonical map data (raw PBF here)
 ├── MVP.md                    Product spec
 ├── AGENTS.md                 Agent operating rules
@@ -209,7 +177,7 @@ PRISM/
 
 ## Hard architecture rules
 
-- Frontend: React, TypeScript, Vite, MapLibre GL JS, PMTiles, GeoJSON, Framer Motion, Lucide, ECharts, Space Grotesk.
+- Frontend: React, TypeScript, Vite, MapLibre GL JS, PMTiles, GeoJSON, Framer Motion, Lucide, ECharts.
 - Backend: Python, uv, FastAPI, SQLite, SQLAlchemy, Pydantic, Google GenAI SDK, OR-Tools, WebSockets.
 - Local-first. No Firebase, Supabase, Mongo Atlas, cloud databases, hosted GIS, Google Maps, Mapbox, or paid map APIs.
 - Local Guwahati data under `data/guwahati/` and `frontend/public/data/guwahati/`. Do not delete or modify the raw PBF.

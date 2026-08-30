@@ -784,20 +784,43 @@ POST /api/intelligence/verify
 POST /api/intelligence/priority
 POST /api/intelligence/situation
 POST /api/intelligence/silence
+GET  /api/intelligence/confidence
+GET  /api/intelligence/weather/{lat}/{lon}
+POST /api/intelligence/resources/plan
+POST /api/intelligence/query
+```
+
+## Voice Assistant
+
+``` http
+POST /api/intelligence/query
+```
+
+Request body:
+``` json
+{
+  "query": "What is the status of Bhangagarh?",
+  "conversation_id": "optional"
+}
+```
+
+Response body:
+``` json
+{
+  "query": "What is the status of Bhangagarh?",
+  "response": {
+    "answer": "Bhangagarh has critical flooding...",
+    "focus_lat": 26.1495,
+    "focus_lng": 91.7655,
+    "area_id": "S03"
+  }
+}
 ```
 
 ## Resources
 
 ``` http
 GET  /api/resources
-POST /api/resources/optimize
-POST /api/resources/plan
-```
-
-## Weather
-
-``` http
-GET /api/weather/{lat}/{lon}
 ```
 
 ## Simulation
@@ -806,12 +829,13 @@ GET /api/weather/{lat}/{lon}
 POST /api/simulation/start
 POST /api/simulation/pause
 POST /api/simulation/reset
+GET  /api/simulation/status
 ```
 
 ## WebSocket
 
 ``` text
-/ws/live
+/api/simulation/ws/live
 ```
 
 Events:

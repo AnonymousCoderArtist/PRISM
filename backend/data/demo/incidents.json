@@ -1,0 +1,4 @@
+[
+  {"id":"INC-001","title":"Brahmaputra Flooding - Bhangagarh","event_type":"flood","latitude":26.1495,"longitude":91.7655,"area_id":"S03","severity":"critical","people_affected":420,"people_trapped":85,"vulnerable_population":340,"confidence":92,"priority":95,"status":"active"},
+  {"id":"INC-002","title":"Road Collapse - Maligaon Bridge","event_type":"infrastructure","latitude":26.1325,"longitude":91.7255,"area_id":"S04","severity":"high","people_affected":150,"people_trapped":20,"vulnerable_population":60,"confidence":78,"priority":82,"status":"active"}
+]

@@ -1,0 +1,7 @@
+[
+  {"id":"RES-001","type":"boat","status":"available","latitude":26.1490,"longitude":91.7640,"capacity":12,"availability":1.0},
+  {"id":"RES-002","type":"boat","status":"available","latitude":26.1300,"longitude":91.7200,"capacity":10,"availability":1.0},
+  {"id":"RES-003","type":"ambulance","status":"available","latitude":26.1580,"longitude":91.7480,"capacity":4,"availability":1.0},
+  {"id":"RES-004","type":"rescue_team","status":"available","latitude":26.1495,"longitude":91.7650,"capacity":20,"availability":1.0},
+  {"id":"RES-005","type":"helicopter","status":"available","latitude":26.1500,"longitude":91.7500,"capacity":8,"availability":1.0}
+]

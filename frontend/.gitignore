@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Large 3D assets — keep locally, share via USB / Git LFS if needed
+# Uncomment to avoid pushing 30M+ GLBs to GitHub:
+# public/models/*.glb
+# public/*.glb
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
