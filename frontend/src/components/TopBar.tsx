@@ -77,13 +77,13 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
               AI LIVE
             </span>
           ) : (
-            <span title="Demo: precomputed AI results, zero tokens consumed" style={{
+            <span title="Precomputed AI results, zero tokens consumed" style={{
               fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.12em",
               color: "var(--ink)", background: "var(--bg-elevated)", border: "1px solid var(--ink)",
               padding: "4px 8px", display: "inline-flex", alignItems: "center", gap: 6,
             }}>
               <span style={{ width: 6, height: 6, background: "var(--ink)" }} />
-              DEMO • AI NOT INVOKED
+              AI PRECOMPUTED
             </span>
           )}
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.1em", color: "var(--text-muted)" }}>WARDS: 60 • LOCAL-FIRST</span>
