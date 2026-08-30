@@ -1,1 +1,4 @@
 data/guwahati/raw/
+backend/uvicorn.out
+backend/uvicorn.err
+-PRISM/
