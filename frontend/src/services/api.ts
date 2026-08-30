@@ -118,10 +118,10 @@ function mapResourceType(type: string): Resource["type"] {
 
 function mapResourceStatus(status: string): Resource["status"] {
   const s = status.toLowerCase();
-  if (s === "deployed") return "en_route";
+  if (s === "deployed") return "deployed" as Resource["status"];
   if (s === "available") return "available";
-  if (s === "standby") return "available";
-  if (s === "maintenance") return "offline";
+  if (s === "standby") return "standby";
+  if (s === "maintenance") return "available";
   return "available";
 }
 

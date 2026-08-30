@@ -35,7 +35,7 @@ export type Incident = {
 export type Resource = {
   id: string;
   type: "medical" | "rescue" | "shelter" | "food" | "transport";
-  status: "available" | "deployed" | "standby" | "en_route" | "active" | "arrived" | "offline";
+  status: "available" | "deployed" | "standby";
   wardCode: number;
   lat: number;
   lon: number;

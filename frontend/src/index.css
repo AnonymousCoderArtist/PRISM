@@ -145,9 +145,19 @@ html, body {
 }
 .panel-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px; }
 
-/* Map container */
+/* Map container with fading edges */
 .map-container { width: 100%; height: 100%; position: relative; background: #010203; }
 .maplibregl-canvas { outline: none; }
+.map-fade-edges {
+  position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  background:
+    linear-gradient(90deg, rgba(5,6,7,0.92) 0%, transparent 7%, transparent 93%, rgba(5,6,7,0.92) 100%),
+    linear-gradient(180deg, rgba(5,6,7,0.82) 0%, transparent 9%, transparent 88%, rgba(5,6,7,0.82) 100%);
+}
+.map-fade-edges::after {
+  content: ""; position: absolute; inset: 0;
+  box-shadow: inset 0 0 80px rgba(0,0,0,0.65), inset 0 0 1px rgba(204,255,0,0.12);
+}
 .maplibregl-ctrl-attrib {
   background: rgba(5,6,7,0.9) !important;
   color: var(--text-muted) !important;
@@ -163,13 +173,48 @@ html, body {
 }
 .maplibregl-ctrl-group button { filter: invert(0.85); }
 
+/* HUD grid overlay on map */
+.hud-grid {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0.07;
+  background-image:
+    linear-gradient(rgba(204,255,0,0.35) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(204,255,0,0.35) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.hud-scanline {
+  position: absolute; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(204,255,0,0.35), transparent);
+  animation: scan 6s linear infinite;
+  opacity: 0.4;
+}
+.hud-vignette {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(900px 500px at 50% 45%, transparent 55%, rgba(0,0,0,0.55) 92%);
+}
+.hud-crosshair {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: 120px; height: 120px; pointer-events: none; opacity: 0.18;
+}
+.hud-crosshair::before, .hud-crosshair::after {
+  content: ""; position: absolute; background: var(--lime);
+}
+.hud-crosshair::before { left: 50%; top: 0; bottom: 0; width: 1px; transform: translateX(-0.5px); }
+.hud-crosshair::after { top: 50%; left: 0; right: 0; height: 1px; transform: translateY(-0.5px); }
+
 /* Emergency red mode — replaces lime/yellow with red */
 .emergency-active .prism-app { animation: emergencyShake 0.32s ease-in-out infinite alternate; }
 .emergency-active .prism-map { box-shadow: inset 0 0 140px rgba(220, 20, 20, 0.48), 0 0 0 1.2px rgba(255,40,40,0.32); }
 .emergency-active .panel { border-color: rgba(255,60,60,0.28) !important; }
 .emergency-active .panel::before { border-top-color: rgba(255,45,45,0.95) !important; border-left-color: rgba(255,45,45,0.95) !important; }
 .emergency-active .prism-header { border-top-color: rgba(255,45,45,0.95) !important; background: linear-gradient(90deg,#1a0606,#0A0F0F) !important; }
+.emergency-active .hud-grid { background-image: linear-gradient(rgba(255,77,77,0.28) 1px, transparent 1px), linear-gradient(90deg, rgba(255,77,77,0.28) 1px, transparent 1px) !important; opacity: 0.09 !important; }
+.emergency-active .hud-scanline { background: linear-gradient(90deg, transparent, rgba(255,77,77,0.55), transparent) !important; }
+.emergency-active .hud-crosshair::before, .emergency-active .hud-crosshair::after { background: rgba(255,77,77,0.85) !important; }
+.emergency-active .map-fade-edges::after { box-shadow: inset 0 0 90px rgba(150,0,0,0.55), inset 0 0 1px rgba(255,60,60,0.2) !important; }
+.emergency-tint { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(900px 450px at 50% 0%, rgba(255,30,30,0.20), transparent 72%); z-index: 2; mix-blend-mode: normal; }
+.emergency-pulse { position: absolute; inset: -2px; pointer-events: none; border: 1.5px solid rgba(255,45,45,0.38); border-radius: 6px; animation: emergencyPulse 1.2s ease-out infinite; z-index: 1; }
 @keyframes emergencyShake { 0% { transform: translateX(-0.4px); } 100% { transform: translateX(0.4px); } }
+@keyframes emergencyPulse { 0% { opacity: 0.9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.03); } }
 @keyframes emergencyFlash { 0%,100% { opacity: 1; } 50% { opacity: 0.22; } }
 
 /* Hover & gradients polish — yellow lime only */
