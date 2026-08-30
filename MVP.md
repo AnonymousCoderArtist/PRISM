@@ -784,20 +784,15 @@ POST /api/intelligence/verify
 POST /api/intelligence/priority
 POST /api/intelligence/situation
 POST /api/intelligence/silence
+GET  /api/intelligence/confidence
+GET  /api/intelligence/weather/{lat}/{lon}
+POST /api/intelligence/resources/plan
 ```
 
 ## Resources
 
 ``` http
 GET  /api/resources
-POST /api/resources/optimize
-POST /api/resources/plan
-```
-
-## Weather
-
-``` http
-GET /api/weather/{lat}/{lon}
 ```
 
 ## Simulation
@@ -806,12 +801,13 @@ GET /api/weather/{lat}/{lon}
 POST /api/simulation/start
 POST /api/simulation/pause
 POST /api/simulation/reset
+GET  /api/simulation/status
 ```
 
 ## WebSocket
 
 ``` text
-/ws/live
+/api/simulation/ws/live
 ```
 
 Events:

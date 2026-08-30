@@ -30,13 +30,18 @@ Copy `.env.example` to `.env` and set values as needed.
 | `DATABASE_URL` | SQLite database URL | `sqlite:///data/prism.db` |
 | `SIMULATION_SPEED_MS` | Simulation tick interval | `2000` |
 | `GEMINI_API_KEY` | Google AI API key | _(empty = deterministic fallback)_ |
-| `GEMINI_MODEL` | Gemini model name | `gemini-1.5-flash` |
+| `GEMINI_MODEL` | Gemini model name | `gemini-3.5-flash` |
+| `GEMINI_MODEL_FALLBACKS` | Gemini fallback models (comma-separated) | `gemini-1.5-flash,gemini-flash-latest` |
 | `AI_PROVIDER` | AI provider selection | _(empty = auto)_ |
 | `OPENAI_API_KEY` | OpenAI-compatible API key | _(empty)_ |
 | `OPENAI_BASE_URL` | OpenAI-compatible base URL | `https://api.openai.com/v1` |
 | `OPENAI_MODEL` | OpenAI-compatible model name | `gpt-4o-mini` |
 
 > The backend is designed to run without any AI key. If no provider is configured or the call fails, the system falls back to deterministic structured responses.
+
+### Model fallbacks (Gemini)
+
+If the primary Gemini model returns an error (404, 503, quota exhaustion, etc.), the adapter automatically retries the request with the models listed in `GEMINI_MODEL_FALLBACKS` before falling back to deterministic responses. This makes the system resilient to model deprecations and temporary outages.
 
 ### Provider selection rules
 

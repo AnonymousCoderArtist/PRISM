@@ -10,6 +10,7 @@ import httpx
 from backend.config import (
     GEMINI_API_KEY,
     GEMINI_MODEL,
+    GEMINI_MODEL_FALLBACKS,
     AI_PROVIDER,
     OPENAI_API_KEY,
     OPENAI_BASE_URL,
@@ -26,6 +27,7 @@ class AIAdapter:
         self._provider = AI_PROVIDER
         self._gemini_client = None
         self._gemini_model = GEMINI_MODEL
+        self._gemini_models = [GEMINI_MODEL] + GEMINI_MODEL_FALLBACKS
         self._openai_model = OPENAI_MODEL
         self._openai_base_url = OPENAI_BASE_URL.rstrip("/")
         self._http = httpx.Client(timeout=30.0)
@@ -48,6 +50,23 @@ class AIAdapter:
             return bool(OPENAI_API_KEY)
         return self._gemini_client is not None
 
+    def _try_gemini_models(self, prompt: str, config=None) -> str | None:
+        last_error = None
+        for model_name in self._gemini_models:
+            try:
+                resp = self._gemini_client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=config,
+                )
+                text = (resp.text or "").strip()
+                if text:
+                    return text
+            except Exception as exc:
+                last_error = exc
+                continue
+        return None
+
     def _call_gemini(self, prompt: str, response_schema: dict[str, Any] | None = None) -> dict[str, Any]:
         if not self._gemini_client:
             raise AIAdapterError("Gemini client not configured")
@@ -58,12 +77,10 @@ class AIAdapter:
                 response_mime_type="application/json",
                 response_schema=response_schema,
             )
-        resp = self._gemini_client.models.generate_content(
-            model=self._gemini_model,
-            contents=prompt,
-            config=config,
-        )
-        text = (resp.text or "").strip()
+        
+        text = self._try_gemini_models(prompt, config=config)
+        if text is None:
+            raise AIAdapterError("All Gemini models failed")
         if not text:
             raise AIAdapterError("Empty response from Gemini")
         return json.loads(text)
@@ -169,11 +186,9 @@ class AIAdapter:
         )
         try:
             if self._provider == "gemini" and self._gemini_client:
-                resp = self._gemini_client.models.generate_content(
-                    model=self._gemini_model,
-                    contents=prompt,
-                )
-                return (resp.text or "").strip()
+                text = self._try_gemini_models(prompt)
+                if text:
+                    return text
 
             if self._provider == "openai":
                 headers = {
@@ -189,7 +204,8 @@ class AIAdapter:
                 resp.raise_for_status()
                 data = resp.json()
                 text = data["choices"][0]["message"]["content"].strip()
-                return text
+                if text:
+                    return text
 
             raise AIAdapterError("No AI provider configured for summarization")
         except Exception as exc:
