@@ -2,6 +2,8 @@ import { motion } from "framer-motion";
 import { MapPinned, AlertTriangle, LocateFixed, EyeOff, Truck, Route, Play, Pause, Zap, ShieldCheck } from "lucide-react";
 import { usePrism } from "../store/PrismContext";
 import { mockStats } from "../data/mock";
+import { Button } from "@/components/ui/neon-button";
+import { DotPattern } from "@/components/ui/dot-pattern-1";
 
 export function LeftPanel() {
   const { mapMode, setMapMode, simulationState, setSimulationState, plan, planPhase, incidents, selectWard, selectIncident, selectedIncidentId } = usePrism();
@@ -9,7 +11,8 @@ export function LeftPanel() {
   return (
     <aside className="panel prism-left" style={{ borderRight: "1px solid var(--border)", borderLeft: "1px solid var(--border)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {/* === PLAN ON TOP — BIGGEST === */}
-      <div style={{ flex: 1.6, display: "flex", flexDirection: "column", overflow: "hidden", background: "linear-gradient(180deg, rgba(204,255,0,0.04), transparent 22%), var(--bg-panel)" }}>
+      <div className="relative" style={{ flex: 1.6, display: "flex", flexDirection: "column", overflow: "hidden", background: "linear-gradient(180deg, rgba(204,255,0,0.04), transparent 22%), var(--bg-panel)" }}>
+        <DotPattern width={14} height={14} cr={0.7} className="fill-[rgba(204,255,0,0.07)] opacity-30" />
         <div className="panel-header" style={{ background: "var(--bg-panel-2)" }}>
           <span className="panel-title" style={{ color: "var(--lime)" }}><Truck size={12} /> RESPONSE PLAN <span style={{ color: "var(--text-faint)", fontWeight: 400, letterSpacing: "0.06em", marginLeft: 6 }}>OR-TOOLS • SIM</span></span>
           <span className="mono" style={{ fontSize: 8, color: plan.length ? "var(--lime)" : "var(--text-faint)" }}>{plan.length ? `${plan.length} ASSIGNMENTS` : planPhase === "collecting" ? "AWAITING" : planPhase === "optimizing" ? "COMPUTING" : "IDLE"}</span>
@@ -21,13 +24,21 @@ export function LeftPanel() {
               <div className="mono" style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: simulationState === "running" ? "var(--lime)" : "var(--text)" }}>{simulationState === "running" ? "● SIMULATION LIVE" : "READY TO SIMULATE"}</div>
               <div className="mono" style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 2 }}>Reports stream 0.9s • Plan LAST</div>
             </div>
-            <button onClick={() => setSimulationState(simulationState === "running" ? "paused" : "running")} className="mono" style={{
-              display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 4, cursor: "pointer",
-              background: simulationState === "running" ? "#050607" : "var(--lime)", color: simulationState === "running" ? "var(--lime)" : "#050607",
-              border: simulationState === "running" ? "1px solid var(--lime-border)" : "1px solid transparent", fontWeight: 800, fontSize: 10, letterSpacing: "0.12em",
-            }}>
-              {simulationState === "running" ? <Pause size={12} /> : <Play size={12} />} {simulationState === "running" ? "PAUSE" : "SIMULATE"}
-            </button>
+            <Button
+              onClick={() => setSimulationState(simulationState === "running" ? "paused" : "running")}
+              neon={simulationState !== "running"}
+              variant={simulationState === "running" ? "ghost" : "solid"}
+              size="sm"
+              className={
+                simulationState === "running"
+                  ? "!border-[var(--lime-border)] !bg-transparent !text-[var(--lime)] !px-5 !py-2 font-mono text-[10px] tracking-[0.12em] font-extrabold"
+                  : "!bg-[var(--lime)] !text-black !border-transparent hover:!bg-[#b8e600] !px-5 !py-2 font-mono text-[10px] tracking-[0.12em] font-extrabold shadow-[0_0_12px_rgba(204,255,0,0.35)]"
+              }
+            >
+              <span className="inline-flex items-center gap-1.5">
+                {simulationState === "running" ? <Pause size={12} /> : <Play size={12} />} {simulationState === "running" ? "PAUSE" : "SIMULATE"}
+              </span>
+            </Button>
           </div>
 
           {plan.length === 0 ? (

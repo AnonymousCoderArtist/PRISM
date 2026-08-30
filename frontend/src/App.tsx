@@ -9,6 +9,7 @@ import { ResourcesPage } from "./components/ResourcesPage";
 import { PrismProvider } from "./store/PrismContext";
 
 import { usePrism } from "./store/PrismContext";
+import { DotPattern } from "@/components/ui/dot-pattern-1";
 
 function DashboardShell({ onOpenResources, view }: { onOpenResources: () => void; view: string }) {
   const { simulationState, planPhase } = usePrism();
@@ -28,6 +29,7 @@ function DashboardShell({ onOpenResources, view }: { onOpenResources: () => void
 
   return (
     <div className={`prism-app ${isEmergency ? "emergency-active" : ""} ${isReady ? "dispatch-ready" : ""}`} style={{ position: "relative" }}>
+      <DotPattern width={18} height={18} cr={0.9} className="fill-[rgba(204,255,0,0.08)] opacity-40" />
       <TopBar onOpenResources={onOpenResources} view={view} />
       <LeftPanel />
       <div className="prism-map panel" style={{ borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)" }}>

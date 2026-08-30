@@ -4,7 +4,6 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { DARK_STYLE, GUWAHATI_CAMERA, WARD_FILL } from "../lib/mapStyle";
 import { usePrism } from "../store/PrismContext";
 import { EmergencyBanner } from "./EmergencyBanner";
-import { Resource3DLayer } from "../map/layers/resourceLayer";
 import { ensureRouteLayers, updateRoutes } from "../map/layers/routeLayer";
 
 const WARDS_URL = "/data/guwahati/geojson/wards_guwahati.geojson";
@@ -27,6 +26,7 @@ export function MapView() {
   const selectedResIdRef = useRef(selectedResourceId);
   selectedResIdRef.current = selectedResourceId;
   const FILL = WARD_FILL;
+  const pngReadyRef = useRef(false);
   const isEmergency = simulationState === "running" && (planPhase === "connecting" || planPhase === "collecting" || planPhase === "verifying" || planPhase === "optimizing");
   const isDispatched = planPhase === "ready";
 
@@ -35,7 +35,6 @@ export function MapView() {
   incidentsRef.current = incidents;
   const movingRef = useRef(movingAssets);
   movingRef.current = movingAssets;
-  const resourceLayerRef = useRef<Resource3DLayer | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -283,28 +282,91 @@ export function MapView() {
         map.addSource("moving-remaining", { type: "geojson", data: { type: "FeatureCollection", features: [] } as unknown as never });
         // keep sources for state sync but do NOT add circle/line layers — user wants only GLB models
 
-        // ---- PRISM 3D resource layers — always visible, fixed screen size (Google Maps style) ----
+        // ---- PRISM PNG resource layer — high-quality billboards (user requested PNG, no GLB) ----
         try { ensureRouteLayers(map); } catch { /* ignore */ }
 
-        // 3D models — Three.js custom layer sharing map GL context
-        const rLayer = new Resource3DLayer({
-          onSelect: (id) => {
-            if (id) {
-              // select in store + highlight
-              // use direct store setter via a custom event — store already has selectResource
-              // we defer to outer useEffect sync; here just trigger through window dispatch
-              const ev = new CustomEvent("prism:select-resource", { detail: id });
-              window.dispatchEvent(ev);
-            }
+        // Load PNG icons (background already removed & cropped to _icon.png)
+        const pngDefs: { id: string; url: string }[] = [
+          { id: "ambulance-icon", url: "/ambulance_icon.png" },
+          { id: "ambulance-icon-flip-h", url: "/ambulance_icon_flip_h.png" },
+          { id: "ambulance-icon-flip-v", url: "/ambulance_icon_flip_v.png" },
+          { id: "boat-icon", url: "/boat_icon.png" },
+          { id: "boat-icon-flip-h", url: "/boat_icon_flip_h.png" },
+          { id: "boat-icon-flip-v", url: "/boat_icon_flip_v.png" },
+          { id: "helicopter-icon", url: "/helicopter_icon.png" },
+          { id: "helicopter-icon-flip-h", url: "/helicopter_icon_flip_h.png" },
+          { id: "rescue-icon", url: "/firevehicle_icon.png" },
+          { id: "rescue-icon-flip-h", url: "/firevehicle_icon_flip_h.png" },
+          { id: "rescue-icon-flip-v", url: "/firevehicle_icon_flip_v.png" },
+        ];
+        const loadImg = (url: string) =>
+          new Promise<HTMLImageElement>((res, rej) => {
+            const im = new Image();
+            im.crossOrigin = "anonymous";
+            im.onload = () => res(im);
+            im.onerror = (e) => rej(e);
+            im.src = url;
+          });
+        for (const d of pngDefs) {
+          try {
+            const img = await loadImg(d.url);
+            if (!map.hasImage(d.id)) map.addImage(d.id, img as unknown as HTMLImageElement, { pixelRatio: 2 } as never);
+          } catch (e) {
+            console.warn(`[PNG] failed ${d.url}`, e);
+            // fallback via map.loadImage (callback style)
+            await new Promise<void>((done) => {
+              (map as unknown as { loadImage: (u: string, cb: (err: unknown, img: HTMLImageElement) => void) => void }).loadImage(d.url, (err, im2) => {
+                if (!err && im2 && !map.hasImage(d.id)) {
+                  try { map.addImage(d.id, im2 as unknown as HTMLImageElement); } catch { /* ignore */ }
+                }
+                done();
+              });
+            });
+          }
+        }
+        // GeoJSON source for PNG billboards
+        map.addSource("prism-png-resources", { type: "geojson", data: { type: "FeatureCollection", features: [] } as unknown as never });
+        map.addLayer({
+          id: "prism-png-layer",
+          type: "symbol",
+          source: "prism-png-resources",
+          layout: {
+            "icon-image": ["get", "icon"] as unknown as never,
+            "icon-size": ["interpolate", ["linear"], ["zoom"], 10, 0.11, 12, 0.15, 14, 0.2, 16, 0.28] as unknown as never,
+            "icon-rotate": ["get", "headingAdj"] as unknown as never,
+            "icon-rotation-alignment": "map" as unknown as never,
+            "icon-allow-overlap": true,
+            "icon-ignore-placement": true,
+            "icon-anchor": "center",
+            "text-field": ["get", "id"] as unknown as never,
+            "text-size": 9,
+            "text-font": ["Open Sans Bold"] as never,
+            "text-offset": [0, 1.15],
+            "text-anchor": "top",
+            "text-allow-overlap": true,
           },
-        });
-        map.addLayer(rLayer as unknown as maplibregl.LayerSpecification);
-        resourceLayerRef.current = rLayer;
-        // initial feed
-        rLayer.setResources(prismResRef.current);
-        if (selectedResIdRef.current) rLayer.setSelected(selectedResIdRef.current);
-
-        // sync fallback 2d data already seeded; routes will be driven by outer effect
+          paint: {
+            "text-color": "#E8ECEB",
+            "text-halo-color": "#050607",
+            "text-halo-width": 1,
+            "icon-opacity": 1,
+          },
+        } as unknown as never);
+        // subtle selected highlight — no extra circles per earlier request, just allow filter-based glow if needed (kept invisible by default)
+        map.addLayer({
+          id: "prism-png-selected",
+          type: "circle",
+          source: "prism-png-resources",
+          filter: ["==", ["get", "id"], "__none__"] as unknown as never,
+          paint: {
+            "circle-radius": 18,
+            "circle-color": "#CCFF00",
+            "circle-opacity": 0.0,
+            "circle-stroke-color": "#CCFF00",
+            "circle-stroke-width": 0,
+          },
+        } as unknown as never);
+        pngReadyRef.current = true;
 
         // Click handlers for wards
         map.on("mousemove", "wards-fill", (e: maplibregl.MapLayerMouseEvent) => {
@@ -591,63 +653,115 @@ export function MapView() {
     movingRef.current = movingAssets;
   }, [movingAssets, loaded]);
 
-  // ---- Prism 3D resources sync (GLB via Three.js custom layer) — fixed screen size, only predicted route ----
+  // ---- Prism PNG resources sync — billboards only after plan ready, predicted route only ----
+  // Base headings: SW=225 for ambulance/rescue/heli, NE=45 for boat
+  const getPngIcon = (kind: string, heading: number): { icon: string; headingAdj: number } => {
+    const opts: { icon: string; base: number }[] =
+      kind === "boat"
+        ? [
+            { icon: "boat-icon", base: 45 },
+            { icon: "boat-icon-flip-h", base: 315 },
+            { icon: "boat-icon-flip-v", base: 135 },
+          ]
+        : kind === "helicopter"
+          ? [{ icon: "helicopter-icon", base: 225 }]
+          : kind === "rescue_vehicle"
+            ? [
+                { icon: "rescue-icon", base: 225 },
+                { icon: "rescue-icon-flip-h", base: 135 },
+                { icon: "rescue-icon-flip-v", base: 315 },
+              ]
+            : [
+                { icon: "ambulance-icon", base: 225 },
+                { icon: "ambulance-icon-flip-h", base: 135 },
+                { icon: "ambulance-icon-flip-v", base: 315 },
+              ];
+    let best = opts[0];
+    let bestDiff = 360;
+    for (const o of opts) {
+      const diff = Math.abs(((heading - o.base + 540) % 360) - 180);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        best = o;
+      }
+    }
+    return { icon: best.icon, headingAdj: heading - best.base };
+  };
+
   useEffect(() => {
     const map = mapRef.current;
-    const layer = resourceLayerRef.current;
-    if (!map || !layer || !loaded) return;
-    layer.setResources(prismResources);
+    if (!map || !loaded || !pngReadyRef.current) return;
+    const src = map.getSource("prism-png-resources") as maplibregl.GeoJSONSource | undefined;
+    if (!src) return;
+    const fc = {
+      type: "FeatureCollection",
+      features: prismResources.map(r => {
+        const { icon, headingAdj } = getPngIcon(r.kind, r.heading);
+        return {
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [r.lng, r.lat] },
+          properties: { id: r.id, kind: r.kind, heading: headingAdj, headingAdj, icon, status: r.status },
+        };
+      }),
+    } as unknown as never;
+    src.setData(fc as never);
     try { updateRoutes(map, prismResources, resourceTrails); } catch { /* ignore */ }
   }, [prismResources, resourceTrails, loaded]);
 
   useEffect(() => {
-    const layer = resourceLayerRef.current;
-    if (!layer || !loaded) return;
-    layer.setSelected(selectedResourceId);
-    if (selectedResource) {
-      // subtle fly to selected at operational zoom, preserve pitch
-      const map = mapRef.current;
-      if (map) {
-        const curZ = map.getZoom();
-        if (curZ < 12.5) map.flyTo({ center: [selectedResource.lng, selectedResource.lat], zoom: 13.2, pitch: 52, bearing: -10, duration: 700, essential: true });
+    const map = mapRef.current;
+    if (!map || !loaded || !pngReadyRef.current) return;
+    // highlight selected via filter (circle layer) + icon-size pop via feature-state? keep simple filter
+    if (map.getLayer("prism-png-selected")) {
+      if (selectedResourceId) {
+        map.setFilter("prism-png-selected", ["==", ["get", "id"], selectedResourceId] as never);
+        map.setPaintProperty("prism-png-selected", "circle-opacity", 0.22);
+        map.setPaintProperty("prism-png-selected", "circle-stroke-width", 1.4);
+      } else {
+        map.setFilter("prism-png-selected", ["==", ["get", "id"], "__none__"] as never);
+        map.setPaintProperty("prism-png-selected", "circle-opacity", 0);
+        map.setPaintProperty("prism-png-selected", "circle-stroke-width", 0);
       }
+    }
+    if (selectedResource) {
+      const curZ = map.getZoom();
+      if (curZ < 12.5) map.flyTo({ center: [selectedResource.lng, selectedResource.lat], zoom: 13.2, pitch: 52, bearing: -10, duration: 700, essential: true });
     }
   }, [selectedResourceId, selectedResource, loaded]);
 
-  // window event bridge from Three.js layer onSelect
-  useEffect(() => {
-    const h = (e: Event) => {
-      const id = (e as CustomEvent<string>).detail;
-      if (id) selectResource(id);
-    };
-    window.addEventListener("prism:select-resource" as never, h as never);
-    return () => window.removeEventListener("prism:select-resource" as never, h as never);
-  }, [selectResource]);
-
-  // Map click fallback via lngLat proximity (more reliable than raycaster after projection)
+  // PNG icon click / hover — clean, no circles except subtle selected halo above
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !loaded) return;
-    const onClick = (e: maplibregl.MapMouseEvent) => {
-      // ignore if clicked on ward feature — ward handler fires first; we check resource hit via proximity
-      const layer = resourceLayerRef.current;
-      if (!layer) return;
-      const hit = layer.hitTestLngLat(e.lngLat.lng, e.lngLat.lat, map.getZoom());
-      if (hit) {
-        selectResource(hit);
-        // highlight on layer
-        layer.setSelected(hit);
-        // also pan slightly
-        // don't fly aggressively to avoid fighting ward click
-        return;
+    if (!map || !loaded || !pngReadyRef.current) return;
+    const onClick = (e: maplibregl.MapLayerMouseEvent) => {
+      const f = e.features?.[0];
+      const id = (f?.properties as { id?: string } | undefined)?.id;
+      if (id) {
+        selectResource(id);
+        // fly slightly handled in selected effect
+        // stop propagation to ward click
+        // @ts-ignore
+        if (e.originalEvent) (e.originalEvent as MouseEvent).stopPropagation?.();
       }
-      // if clicking map background while a resource selected, keep selection; ward clicks still propagate
     };
-    map.on("click", onClick);
-    return () => { try { map.off("click", onClick); } catch { /* ignore */ } };
+    const onHover = (e: maplibregl.MapLayerMouseEvent) => {
+      map.getCanvas().style.cursor = "pointer";
+      // optional: show small tooltip via hoverAsset? keep cursor only for clean look
+      void e;
+    };
+    const onLeave = () => { map.getCanvas().style.cursor = ""; };
+    map.on("click", "prism-png-layer", onClick as never);
+    map.on("mousemove", "prism-png-layer", onHover as never);
+    map.on("mouseleave", "prism-png-layer", onLeave as never);
+    // also allow clicking selected halo
+    map.on("click", "prism-png-selected", onClick as never);
+    return () => {
+      try { map.off("click", "prism-png-layer", onClick as never); } catch { /* ignore */ }
+      try { map.off("mousemove", "prism-png-layer", onHover as never); } catch { /* ignore */ }
+      try { map.off("mouseleave", "prism-png-layer", onLeave as never); } catch { /* ignore */ }
+      try { map.off("click", "prism-png-selected", onClick as never); } catch { /* ignore */ }
+    };
   }, [loaded, selectResource]);
-
-  // 2d fallback removed — 3D models show at all zooms with fixed screen size
 
   // Replay flight (same slow globe curve)
   const replay = () => {
