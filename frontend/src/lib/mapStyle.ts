@@ -16,7 +16,7 @@ export const GUWAHATI_CAMERA = {
 export const WARD_FILL = {
   base: "rgba(204,255,0,0.06)",
   hover: "rgba(204,255,0,0.18)",
-  selected: "rgba(204,255,0,0.28)",
+  selected: "rgba(204,255,0,0.5)",
   stroke: "rgba(204,255,0,0.55)",
   selectedStroke: "#CCFF00",
 };
