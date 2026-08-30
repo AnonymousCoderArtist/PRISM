@@ -345,6 +345,7 @@ export function MapView() {
             "icon-size": 0.1 as unknown as never,
             "icon-rotate": ["get", "headingAdj"] as unknown as never,
             "icon-rotation-alignment": "map" as unknown as never,
+            "icon-pitch-alignment": "viewport" as unknown as never,
             "icon-allow-overlap": true,
             "icon-ignore-placement": true,
             "icon-anchor": "center",
@@ -703,9 +704,11 @@ export function MapView() {
     if (!map || !loaded || !pngReadyRef.current) return;
     const src = map.getSource("prism-png-resources") as maplibregl.GeoJSONSource | undefined;
     if (!src) return;
+    // Only moving resources — hide available/offline per request
+    const moving = prismResources.filter(r => r.status === "en_route" || r.status === "active" || r.status === "arrived");
     const fc = {
       type: "FeatureCollection",
-      features: prismResources.map(r => {
+      features: moving.map(r => {
         const { icon, headingAdj } = getPngIcon(r.kind, r.heading);
         return {
           type: "Feature",
@@ -715,7 +718,7 @@ export function MapView() {
       }),
     } as unknown as never;
     src.setData(fc as never);
-    try { updateRoutes(map, prismResources, resourceTrails); } catch { /* ignore */ }
+    try { updateRoutes(map, prismResources.filter(r => r.status === "en_route"), resourceTrails); } catch { /* ignore */ }
   }, [prismResources, resourceTrails, loaded]);
 
   useEffect(() => {

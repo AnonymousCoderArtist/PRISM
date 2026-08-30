@@ -13,15 +13,30 @@ export function ensureRouteLayers(map: maplibregl.Map): void {
     type: "geojson",
     data: { type: "FeatureCollection", features: [] } as unknown as never,
   });
-  // predicted dashed line — subtle professional
+  // shadow for 3D airplane-like lift (soft, below)
+  map.addLayer({
+    id: "prism-route-shadow",
+    type: "line",
+    source: "prism-resource-routes",
+    paint: {
+      "line-color": "rgba(0,0,0,0.32)",
+      "line-width": 7,
+      "line-opacity": 0.18,
+      "line-blur": 1.4,
+      "line-translate": [2.5, 5],
+      "line-translate-anchor": "viewport" as never,
+    },
+    layout: { "line-cap": "round", "line-join": "round" } as never,
+  } as never);
+  // predicted dashed line — 3D live over map, subtle professional
   map.addLayer({
     id: "prism-route-remaining",
     type: "line",
     source: "prism-resource-routes",
     paint: {
-      "line-color": ["match", ["get", "kind"], "ambulance", "rgba(255,255,255,0.42)", "helicopter", "rgba(204,255,0,0.52)", "boat", "rgba(72,216,255,0.48)", "rescue_vehicle", "rgba(245,185,66,0.48)", "rgba(138,150,152,0.42)"],
-      "line-width": 1.8,
-      "line-opacity": 0.58,
+      "line-color": ["match", ["get", "kind"], "ambulance", "rgba(255,255,255,0.58)", "helicopter", "rgba(204,255,0,0.68)", "boat", "rgba(72,216,255,0.62)", "rescue_vehicle", "rgba(245,185,66,0.62)", "rgba(138,150,152,0.42)"],
+      "line-width": 2.4,
+      "line-opacity": 0.72,
       "line-dasharray": [1.6, 1.6],
     },
     layout: { "line-cap": "round", "line-join": "round" } as never,
