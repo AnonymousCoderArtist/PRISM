@@ -664,39 +664,12 @@ export function MapView() {
     movingRef.current = movingAssets;
   }, [movingAssets, loaded]);
 
-  // ---- Prism PNG resources sync — billboards only after plan ready, predicted route only ----
-  // Base headings: SW=225 for ambulance/rescue/heli, NE=45 for boat
-  const getPngIcon = (kind: string, heading: number): { icon: string; headingAdj: number } => {
-    const opts: { icon: string; base: number }[] =
-      kind === "boat"
-        ? [
-            { icon: "boat-icon", base: 45 },
-            { icon: "boat-icon-flip-h", base: 315 },
-          ]
-        : kind === "helicopter"
-          ? [
-              { icon: "helicopter-icon", base: 225 },
-              { icon: "helicopter-icon-flip-h", base: 135 },
-            ]
-          : kind === "rescue_vehicle"
-            ? [
-                { icon: "rescue-icon", base: 225 },
-                { icon: "rescue-icon-flip-h", base: 135 },
-              ]
-            : [
-                { icon: "ambulance-icon", base: 225 },
-                { icon: "ambulance-icon-flip-h", base: 135 },
-              ];
-    let best = opts[0];
-    let bestDiff = 360;
-    for (const o of opts) {
-      const diff = Math.abs(((heading - o.base + 540) % 360) - 180);
-      if (diff < bestDiff) {
-        bestDiff = diff;
-        best = o;
-      }
-    }
-    return { icon: best.icon, headingAdj: heading - best.base };
+  // Keep icons as is — no rotation/orientation towards path, straight movement, original quality, small
+  const getPngIcon = (kind: string): string => {
+    if (kind === "boat") return "boat-icon";
+    if (kind === "helicopter") return "helicopter-icon";
+    if (kind === "rescue_vehicle") return "rescue-icon";
+    return "ambulance-icon";
   };
 
   useEffect(() => {
@@ -704,16 +677,15 @@ export function MapView() {
     if (!map || !loaded || !pngReadyRef.current) return;
     const src = map.getSource("prism-png-resources") as maplibregl.GeoJSONSource | undefined;
     if (!src) return;
-    // Only moving resources — hide available/offline per request
     const moving = prismResources.filter(r => r.status === "en_route" || r.status === "active" || r.status === "arrived");
     const fc = {
       type: "FeatureCollection",
       features: moving.map(r => {
-        const { icon, headingAdj } = getPngIcon(r.kind, r.heading);
+        const icon = getPngIcon(r.kind);
         return {
           type: "Feature",
           geometry: { type: "Point", coordinates: [r.lng, r.lat] },
-          properties: { id: r.id, kind: r.kind, heading: headingAdj, headingAdj, icon, status: r.status },
+          properties: { id: r.id, kind: r.kind, heading: 0, headingAdj: 0, icon, status: r.status },
         };
       }),
     } as unknown as never;

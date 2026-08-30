@@ -134,14 +134,12 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
             <Radio size={12} /> LIVE
           </span>
           <Activity size={14} style={{ color: "var(--green)" }} />
-          {/* Operator photo — small, not late, existing style kept */}
           <img
             src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face&auto=format"
             alt="Operator"
             className="h-7 w-7 rounded-full object-cover border border-[rgba(204,255,0,0.22)] shadow-[0_2px_8px_rgba(0,0,0,0.5),0_0_0_1px_rgba(204,255,0,0.15)]"
-            style={{ objectFit: "cover" }}
+            style={{ objectFit: "cover", width: "28px", height: "28px" }}
           />
-          {/* Path data icon — small, 3D */}
           <span className="hidden md:inline-flex items-center justify-center h-7 w-7 rounded-full bg-[rgba(204,255,0,0.08)] border border-[rgba(204,255,0,0.18)] shadow-[0_2px_8px_rgba(0,0,0,0.4)]" title="Path data">
             <Route size={12} style={{ color: "var(--lime)" }} />
           </span>
