@@ -13,7 +13,7 @@ from backend.models import (
     ResourceAssignment,
     ActivityEvent,
 )
-from backend.routers import health, reports, incidents, resources, areas, simulation
+from backend.routers import health, reports, incidents, resources, areas, simulation, intelligence
 from backend.services.seed import seed_database
 
 
@@ -42,6 +42,7 @@ app.include_router(incidents.router)
 app.include_router(resources.router)
 app.include_router(areas.router)
 app.include_router(simulation.router)
+app.include_router(intelligence.router)
 
 
 @app.get("/")

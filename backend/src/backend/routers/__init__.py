@@ -1,4 +1,4 @@
-from backend.routers import health, reports, incidents, resources, areas, simulation
+from backend.routers import health, reports, incidents, resources, areas, simulation, intelligence
 
 __all__ = [
     "health",
@@ -7,4 +7,5 @@ __all__ = [
     "resources",
     "areas",
     "simulation",
+    "intelligence",
 ]

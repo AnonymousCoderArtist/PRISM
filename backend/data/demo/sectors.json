@@ -1,0 +1,7 @@
+[
+  {"id":"S01","name":"Dispur","latitude":26.1445,"longitude":91.7362,"population":12000,"vulnerable_population":1800,"status":"at_risk","risk_score":45,"priority":65,"confidence":72,"information_void_score":10},
+  {"id":"S02","name":"Paltan Bazaar","latitude":26.1585,"longitude":91.7485,"population":25000,"vulnerable_population":3200,"status":"affected","risk_score":68,"priority":80,"confidence":85,"information_void_score":5},
+  {"id":"S03","name":"Bhangagarh","latitude":26.1495,"longitude":91.7655,"population":18000,"vulnerable_population":2200,"status":"severe","risk_score":82,"priority":92,"confidence":91,"information_void_score":2},
+  {"id":"S04","name":"Maligaon","latitude":26.1325,"longitude":91.7255,"population":22000,"vulnerable_population":2800,"status":"at_risk","risk_score":58,"priority":72,"confidence":68,"information_void_score":15},
+  {"id":"S09","name":"Six Mile","latitude":26.1515,"longitude":91.7425,"population":11000,"vulnerable_population":1300,"status":"information_void","risk_score":40,"priority":50,"confidence":20,"information_void_score":85}
+]

@@ -1,13 +1,22 @@
+from __future__ import annotations
+
 import asyncio
 import json
-import math
 import random
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 from fastapi import WebSocket
+
+from backend.models.report import SourceType
+from backend.models.activity_log import ActivityEvent
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+DEMO_DIR = BASE_DIR / "data" / "demo"
 
 
 class WebSocketManager:
@@ -42,6 +51,7 @@ class SimulationEngine:
         self.elapsed = 0.0
         self.speed_ms = 2000
         self._task: asyncio.Task | None = None
+        self._scenario: list[dict[str, Any]] = []
 
     async def start(self, speed_ms: int | None = None) -> None:
         if self.running:
@@ -51,6 +61,7 @@ class SimulationEngine:
         if self.start_time is None:
             self.start_time = datetime.utcnow()
         self.running = True
+        self._load_scenario()
         self._task = asyncio.create_task(self._run_loop())
 
     async def pause(self) -> None:
@@ -64,12 +75,58 @@ class SimulationEngine:
         self.tick = 0
         self.start_time = None
         self.elapsed = 0.0
+        self._scenario = []
+
+    def _load_scenario(self) -> None:
+        path = DEMO_DIR / "scenario.json"
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            self._scenario = data.get("phases", [])
+        except Exception:
+            self._scenario = []
+
+    def _phase_for_tick(self, tick: int) -> str:
+        phase = "normal"
+        for entry in self._scenario:
+            if tick >= entry.get("tick", 0):
+                phase = entry.get("name", phase)
+        return phase
+
+    def _events_for_tick(self, tick: int) -> list[str]:
+        events: list[str] = []
+        for entry in self._scenario:
+            if tick == entry.get("tick", -1):
+                events.extend(entry.get("events", []))
+        return events
 
     async def _run_loop(self) -> None:
+        rng = random.Random(42)
         while self.running:
             self.tick += 1
             self.elapsed = (datetime.utcnow() - self.start_time).total_seconds()
-            await manager.broadcast("SIMULATION_TICK", {"tick": self.tick}, self.tick)
+            phase = self._phase_for_tick(self.tick)
+            events = self._events_for_tick(self.tick)
+            for event in events:
+                payload: dict[str, Any] = {"tick": self.tick, "phase": phase}
+                if event == "REPORT_RECEIVED":
+                    payload["report_id"] = f"SIM-R-{self.tick:03d}"
+                    payload["source"] = rng.choice(["citizen", "field_officer", "drone", "satellite"])
+                    payload["location"] = "Sector-" + rng.choice(["A", "B", "C", "D"])
+                elif event == "INCIDENT_UPDATED":
+                    payload["incident_id"] = f"INC-{rng.randint(1, 20):03d}"
+                    payload["status"] = rng.choice(["active", "monitoring", "contained"])
+                elif event == "RESOURCE_ASSIGNED":
+                    payload["resource_id"] = f"RES-{rng.randint(1, 10):03d}"
+                    payload["incident_id"] = f"INC-{rng.randint(1, 20):03d}"
+                    payload["eta_minutes"] = rng.randint(5, 45)
+                elif event == "PLAN_GENERATED":
+                    payload["plan_id"] = f"PLAN-{self.tick:03d}"
+                    payload["assignments"] = rng.randint(1, 4)
+                elif event == "INFORMATION_VOID_DETECTED":
+                    payload["area_id"] = f"S{rng.randint(1, 20):02d}"
+                    payload["void_score"] = rng.randint(60, 95)
+                await manager.broadcast(event, payload, self.tick)
+            await manager.broadcast("SIMULATION_TICK", {"tick": self.tick, "phase": phase}, self.tick)
             await asyncio.sleep(self.speed_ms / 1000.0)
 
     def get_state(self) -> dict[str, Any]:
@@ -80,25 +137,6 @@ class SimulationEngine:
             "scenario_phase": phase,
             "elapsed": round(self.elapsed, 2),
         }
-
-    def _phase_for_tick(self, tick: int) -> str:
-        if tick < 5:
-            return "normal"
-        if tick < 10:
-            return "reports_begin"
-        if tick < 15:
-            return "incidents_form"
-        if tick < 20:
-            return "evidence_arrives"
-        if tick < 25:
-            return "priority_update"
-        if tick < 30:
-            return "resource_assignment"
-        if tick < 35:
-            return "sector_silent"
-        if tick < 40:
-            return "information_void"
-        return "verification"
 
 
 engine = SimulationEngine()

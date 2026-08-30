@@ -1,0 +1,15 @@
+{
+  "name": "Guwahati Flood Scenario",
+  "phases": [
+    {"tick": 0, "name": "normal", "events": []},
+    {"tick": 5, "name": "reports_begin", "events": ["REPORT_RECEIVED"]},
+    {"tick": 10, "name": "incidents_form", "events": ["INCIDENT_UPDATED"]},
+    {"tick": 15, "name": "contradictions", "events": ["REPORT_ANALYZED"]},
+    {"tick": 20, "name": "evidence_arrives", "events": ["CONFIDENCE_UPDATED"]},
+    {"tick": 25, "name": "priority_update", "events": ["PRIORITY_UPDATED"]},
+    {"tick": 30, "name": "resource_assignment", "events": ["RESOURCE_ASSIGNED", "PLAN_GENERATED"]},
+    {"tick": 35, "name": "sector_silent", "events": ["INFORMATION_VOID_DETECTED"]},
+    {"tick": 40, "name": "information_void", "events": ["INFORMATION_VOID_DETECTED"]},
+    {"tick": 45, "name": "verification", "events": ["CONFIDENCE_UPDATED"]}
+  ]
+}

@@ -1,0 +1,12 @@
+.venv
+__pycache__
+*.pyc
+.env
+server.log
+data/prism.db
+.pytest_cache
+.coverage
+htmlcov
+dist
+build
+*.egg-info
