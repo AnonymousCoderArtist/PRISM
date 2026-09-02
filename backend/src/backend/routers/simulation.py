@@ -28,7 +28,6 @@ async def simulation_start(req: SimulationStartRequest) -> Response:
     try:
         get_adapter().enable()
     except Exception:
-        # if no API key is configured, demo mode continues
         pass
     await engine.start(req.speed_ms)
     import json

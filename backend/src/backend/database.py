@@ -5,7 +5,6 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 from backend.config import DATABASE_URL
 
-# Ensure data directory exists
 Path(DATABASE_URL.replace("sqlite:///", "")).parent.mkdir(parents=True, exist_ok=True)
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})

@@ -38,7 +38,6 @@ class AIAdapter:
             if not OPENAI_API_KEY:
                 raise AIAdapterError("OPENAI_API_KEY is required when AI_PROVIDER=openai")
         else:
-            # Default to Gemini if GEMINI_API_KEY is present and provider not explicitly set to openai
             if GEMINI_API_KEY:
                 try:
                     self._gemini_client = genai.Client(api_key=GEMINI_API_KEY)
@@ -47,7 +46,6 @@ class AIAdapter:
                     raise AIAdapterError(f"Failed to init Gemini client: {exc}") from exc
 
     def enable(self) -> None:
-        """Switch the adapter from demo (precomputed) to live AI calls."""
         from backend.config import GEMINI_API_KEY, OPENAI_API_KEY, AI_PROVIDER
         if AI_PROVIDER == "openai":
             if not OPENAI_API_KEY:
@@ -151,10 +149,8 @@ class AIAdapter:
         raise AIAdapterError("No AI provider configured")
 
     def _demo_response(self, prompt: str, schema: dict[str, Any] | None) -> dict[str, Any]:
-        # Precomputed deterministic results for demo. Inferred from prompt keywords.
         p = prompt.lower()
         if "disaster_type" in p and "severity" in p:
-            # weather/predict prompt
             return {
                 "disaster_type": "flood",
                 "confidence": 78,
@@ -182,7 +178,6 @@ class AIAdapter:
                 "evidence": [],
                 "summary": "Demo precomputed analysis.",
             }
-        # default
         return {"answer": "Demo precomputed result.", "focus_lat": None, "focus_lng": None, "area_id": None}
 
     def analyze_report(self, raw_text: str, source_type: str) -> dict[str, Any]:
