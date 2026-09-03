@@ -22,9 +22,9 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
       overflow: "hidden",
     }}>
       <div style={{ position: "absolute", left: 0, right: 0, top: -1, height: 1, background: "linear-gradient(90deg, transparent, rgba(204,255,0,0.55), transparent)", opacity: 0.7, pointerEvents: "none" }} />
-      {/* subtle dot pattern for 3D depth */}
+      {}
       <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: "radial-gradient(rgba(204,255,0,0.9) 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
-      {/* Left: Identity + Resources button on top of menu */}
+      {}
       <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div className="shadow-[0_2px_10px_rgba(204,255,0,0.12),0_1px_2px_rgba(0,0,0,0.6)]" style={{ width: 36, height: 36, display: "grid", placeItems: "center", background: "rgba(204,255,0,0.08)", border: "1px solid rgba(204,255,0,0.2)", borderRadius: 4 }}>
@@ -74,7 +74,7 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
         </div>
       </div>
 
-      {/* Center: Camera breadcrumb */}
+      {}
       <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "var(--font-mono)", fontSize: 10, letterSpacing: "0.1em", color: "var(--text-muted)" }}>
         <span style={{ color: "var(--text-dim)" }}>GLOBAL</span>
         <span style={{ opacity: 0.3 }}>→</span>
@@ -92,7 +92,7 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
         </motion.span>
       </div>
 
-      {/* Right: Sim controls + time + status */}
+      {}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 4, padding: 3 }}>
           <button

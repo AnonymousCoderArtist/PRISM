@@ -22,7 +22,7 @@ type PrismContextValue = AppViewState & {
   setMapMode: (m: AppViewState["mapMode"]) => void;
   setSimulationState: (s: AppViewState["simulationState"]) => void;
   selectedWardName: string | null;
-  incidents: Incident[]; // verification-gated: empty at idle, populates after SIMULATE
+  incidents: Incident[];
   resources: typeof mockResources;
   prismResources: PrismResource[];
   selectedResourceId: string | null;
@@ -58,7 +58,6 @@ export function PrismProvider({ children }: { children: ReactNode }) {
   const [mapMode, setMapMode] = useState<AppViewState["mapMode"]>("wards");
   const [simulationState, setSimulationState] = useState<AppViewState["simulationState"]>("idle");
 
-  // IDLE = truly empty — backend not connected
   const [reports, setReports] = useState<Report[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -66,7 +65,6 @@ export function PrismProvider({ children }: { children: ReactNode }) {
   const [plan, setPlan] = useState<PlanAssignment[]>([]);
   const [planPhase, setPlanPhase] = useState<PrismContextValue["planPhase"]>("idle");
   const [movingAssets, setMovingAssets] = useState<PrismContextValue["movingAssets"]>([]);
-  // Start hidden — only appear after SIMULATE → plan ready (user request)
   const [prismResources, setPrismResources] = useState<PrismResource[]>(() => []);
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
   const [resourceTrails, setResourceTrails] = useState<Map<string, [number, number][]>>(() => new Map());
@@ -75,7 +73,6 @@ export function PrismProvider({ children }: { children: ReactNode }) {
   const sourceIdx = useRef(0);
   const simCounter = useRef(0);
 
-  // ---- Activity always ongoing ----
   useEffect(() => {
     if (selectedWardCode && wardActivity[selectedWardCode]) {
       setActivity(wardActivity[selectedWardCode].slice());
@@ -107,14 +104,12 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(id);
   }, [selectedWardCode]);
 
-  // Simulation loop: backend connect -> reports bursty -> verification -> dots -> plan last -> assets move
   useEffect(() => {
     if (simulationState !== "running") {
       if (simulationState === "idle") setPlanPhase("idle");
       return;
     }
     setPlanPhase("connecting");
-    // simulate backend handshake 0.6s then collecting
     const connectTimer = setTimeout(() => setPlanPhase("collecting"), 650);
 
     const id = setInterval(() => {
@@ -133,7 +128,6 @@ export function PrismProvider({ children }: { children: ReactNode }) {
       };
       setReports(prev => [newReport, ...prev].slice(0, 32));
 
-      // sources every tick emergency
       {
         const sp = simSourcePool[sourceIdx.current % simSourcePool.length];
         sourceIdx.current += 1;
@@ -146,7 +140,6 @@ export function PrismProvider({ children }: { children: ReactNode }) {
         setSources(prev => [newSource, ...prev].slice(0, 22));
       }
 
-      // verification-gated incidents: only push incident dot when verified
       if (isVerified) {
         const template = mockIncidents.find(m => m.wardCode === rp.wardCode) ?? mockIncidents[simCounter.current % mockIncidents.length];
         const verifiedIncident: Incident = {
@@ -163,7 +156,6 @@ export function PrismProvider({ children }: { children: ReactNode }) {
           severity: (["high", "critical", "moderate"] as const)[simCounter.current % 3],
         };
         setIncidents(prev => {
-          // dedupe by wardCode - update if exists
           const exists = prev.find(p => p.wardCode === verifiedIncident.wardCode);
           if (exists) return prev.map(p => p.wardCode === verifiedIncident.wardCode ? verifiedIncident : p);
           return [...prev, verifiedIncident].slice(-12);
@@ -171,7 +163,6 @@ export function PrismProvider({ children }: { children: ReactNode }) {
         if (simCounter.current >= 3) setPlanPhase("verifying");
       }
 
-      // activity surge
       setActivity(prev => {
         const next = prev.slice(1);
         const last = prev[prev.length - 1];
@@ -187,7 +178,6 @@ export function PrismProvider({ children }: { children: ReactNode }) {
       if (simCounter.current === 10) {
         setPlan(FULL_PLAN);
         setPlanPhase("ready");
-        // staggered dispatch one-by-one (realistic), not instant burst
         setTimeout(() => {
           setMovingAssets([{ id: "AMB-01", lon: 91.71, lat: 26.135, label: "AMB 01 → Ward 1 (Bharalu)", kind: "ambulance", progress: 0, trail: [[91.71, 26.135]], etaMin: 12, totalMin: 12 }]);
         }, 420);
@@ -198,7 +188,7 @@ export function PrismProvider({ children }: { children: ReactNode }) {
           setMovingAssets(prev => [...prev, { id: "HELI-01", lon: 91.68, lat: 26.145, label: "HELI 01 → Ward 42 (Pandu)", kind: "helicopter", progress: 0, trail: [[91.68, 26.145]], etaMin: 7, totalMin: 7 }]);
         }, 3800);
       }
-    }, 750); // very fast emergency rate
+    }, 750);
 
     return () => {
       clearTimeout(connectTimer);
@@ -206,17 +196,14 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     };
   }, [simulationState, selectedWardCode]);
 
-  // moving assets - realistic slow (12 min compressed to ~38s, 7 min heli to ~28s), trail behind
   useEffect(() => {
     if (planPhase !== "ready" || movingAssets.length === 0) return;
     const id = setInterval(() => {
       setMovingAssets(prev => prev.map(a => {
-        // realistic: ambulance slower than heli; 500km joke avoided — Guwahati wards 2-5km, heli quicker
         const speed = a.kind === "helicopter" ? 0.0085 : a.kind === "ambulance" && a.id === "AMB-02" ? 0.0062 : 0.0054;
         const npRaw = a.progress + speed;
-        const np = npRaw > 1 ? 0 : npRaw; // loop after arrival (or hold near end)
+        const np = npRaw > 1 ? 0 : npRaw;
         const looped = npRaw > 1;
-        // per-asset route
         const route: Record<string, { s: [number, number]; e: [number, number] }> = {
           "AMB-01": { s: [91.71, 26.135], e: [91.6367, 26.1395] },
           "AMB-02": { s: [91.74, 26.128], e: [91.720, 26.108] },
@@ -233,8 +220,6 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(id);
   }, [planPhase, movingAssets.length]);
 
-  // ---- 3D resource simulation — backend-ready fallback ----
-  // Fleet stays hidden until plan ready — then dispatched like Google Maps navigation
   useEffect(() => {
     if (planPhase !== "ready") return;
     let cancelled = false;
@@ -253,9 +238,8 @@ export function PrismProvider({ children }: { children: ReactNode }) {
             return;
           }
         }
-      } catch { /* keep simulated */ }
+      } catch {  }
       if (cancelled) return;
-      // No backend — dispatch simulated fleet now (first appearance)
       setPrismResources(prev => prev.length ? prev : SIMULATED_RESOURCES.slice());
       setResourceTrails(prev => {
         if (prev.size) return prev;
@@ -267,20 +251,17 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, [planPhase]);
 
-  // Google Maps style dispatch — resources stay at base until SIMULATE → plan ready
   useEffect(() => {
-    // When plan not ready, keep resources idle at base; do not step
     if (planPhase !== "ready") return;
     let tick = 0;
     const id = setInterval(() => {
       tick += 1;
-      const secondsElapsed = tick * 0.12; // each tick is 120ms
+      const secondsElapsed = tick * 0.12;
       setPrismResources(prev => stepSimulatedResources(prev, secondsElapsed));
     }, 120);
     return () => clearInterval(id);
   }, [planPhase]);
 
-  // Update resource trails whenever positions change
   useEffect(() => {
     setResourceTrails(prev => {
       const nm = new Map(prev);
@@ -295,12 +276,11 @@ export function PrismProvider({ children }: { children: ReactNode }) {
     });
   }, [prismResources]);
 
-  // ---- Backend WebSocket live feed (minimal integration) ----
   useEffect(() => {
     if (simulationState !== "running") return;
     const url = wsUrl();
     const ws = new WebSocket(url);
-    ws.onopen = () => { /* live feed active */ };
+    ws.onopen = () => {  };
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
@@ -343,9 +323,9 @@ export function PrismProvider({ children }: { children: ReactNode }) {
             },
           ]);
         }
-      } catch { /* ignore malformed WS messages */ }
+      } catch {  }
     };
-    ws.onclose = () => { /* live feed closed */ };
+    ws.onclose = () => {  };
     ws.onerror = () => { ws.close(); };
     return () => { ws.close(); };
   }, [simulationState]);
@@ -361,7 +341,6 @@ export function PrismProvider({ children }: { children: ReactNode }) {
       setPlan([]);
       setPlanPhase("idle");
       setMovingAssets([]);
-      // hide fleet until next dispatch — user request: no boats visible before plan
       setPrismResources([]);
       setResourceTrails(new Map());
       setSelectedResourceId(null);

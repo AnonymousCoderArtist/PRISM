@@ -60,7 +60,7 @@ function Inner({ onClose }: { onClose: () => void }) {
         </button>
       </div>
 
-      {/* MAIN ADMINISTRATION BLOCK — centre */}
+      {}
       <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 4, padding: "14px 14px", display: "grid", gridTemplateColumns: "280px 1fr 260px", gap: 14, alignItems: "stretch" }}>
         <div style={{ background: "rgba(5,6,7,0.55)", border: "1px solid var(--border)", borderRadius: 4, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
           <div className="mono" style={{ fontSize: 9, letterSpacing: "0.14em", color: "var(--lime)", display: "flex", alignItems: "center", gap: 6 }}><Home size={12} /> MAIN ADMINISTRATION BLOCK <Building2 size={10} style={{ opacity: 0.6 }} /></div>
@@ -113,7 +113,7 @@ function Inner({ onClose }: { onClose: () => void }) {
         ))}
       </div>
 
-      {/* LIVE DISPATCH — updates as each resource is dispatched (one by one after plan ready) */}
+      {}
       <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 4, padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
         <div className="mono" style={{ fontSize: 9, letterSpacing: "0.12em", color: "var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>

@@ -23,8 +23,8 @@ export type Incident = {
   title: string;
   severity: IncidentSeverity;
   status: IncidentStatus;
-  confidence: number; // 0-100
-  priority: number; // 0-100
+  confidence: number;
+  priority: number;
   lat: number;
   lon: number;
   time: string;
@@ -42,7 +42,6 @@ export type Resource = {
   capacity: number;
 };
 
-// Backend-ready: report ingested from field/social/satellite
 export type SourceType = "field" | "social" | "satellite" | "osm" | "official";
 
 export type Source = {
@@ -52,7 +51,7 @@ export type Source = {
   detail: string;
   time: string;
   wardCode: number;
-  confidence: number; // 0-1
+  confidence: number;
 };
 
 export type Report = {
@@ -81,7 +80,6 @@ export const GUWAHATI_BOUNDS: [[number, number], [number, number]] = [
   [91.8521, 26.2093],
 ];
 
-// API contract placeholders — consumed when backend ready
 export type ApiContracts = {
   "GET /api/reports": Report[];
   "GET /api/incidents": Incident[];

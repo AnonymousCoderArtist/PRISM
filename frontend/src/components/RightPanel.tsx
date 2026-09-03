@@ -31,7 +31,7 @@ export function RightPanel() {
 
   return (
     <aside className="panel prism-right" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      {/* ===== TOP-RIGHT: REPORTS streaming ===== */}
+      {}
       <div style={{ display: "flex", flexDirection: "column", height: "42%" , minHeight: 220, borderBottom: "1px solid var(--border)" }}>
         <div className="panel-header">
           <span className="panel-title"><FileText size={11} /> INCOMING REPORTS {simulationState === "idle" && <span style={{ color: "var(--text-faint)", fontWeight: 400 }}>• IDLE</span>}</span>
@@ -81,7 +81,7 @@ export function RightPanel() {
         </div>
       </div>
 
-      {/* ===== RESOURCE INTELLIGENCE (selection-driven) ===== */}
+      {}
       {selectedResource && (
         <div style={{ background: "linear-gradient(180deg, rgba(204,255,0,0.06), transparent 55%), var(--bg-elevated)", borderBottom: "1px solid var(--lime-border)", padding: 10 }}>
           <div className="mono" style={{ fontSize: 8, letterSpacing: "0.12em", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
@@ -137,7 +137,7 @@ export function RightPanel() {
         </div>
       )}
 
-      {/* ===== MIDDLE-RIGHT: CONFIDENCE by location ===== */}
+      {}
       <div style={{ background: "var(--bg-elevated)", borderBottom: "1px solid var(--border)", padding: 10 }}>
         <div className="mono" style={{ fontSize: 8, letterSpacing: "0.12em", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
           <ShieldCheck size={11} /> CONFIDENCE — BY LOCATION {incidents.length === 0 && <span style={{ color: "var(--text-faint)", fontWeight: 400 }}>• AWAITING VERIFICATION</span>}
@@ -174,7 +174,7 @@ export function RightPanel() {
         </div>
       </div>
 
-      {/* ===== BOTTOM-RIGHT: SOURCES streaming down ===== */}
+      {}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 160 }}>
         <div className="panel-header" style={{ background: "var(--bg-panel-2)", flexShrink: 0 }}>
           <span className="panel-title"><Database size={11} /> EVIDENCE SOURCES</span>

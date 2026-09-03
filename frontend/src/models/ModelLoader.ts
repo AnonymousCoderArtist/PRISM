@@ -7,9 +7,6 @@ const loader = new GLTFLoader();
 const cache = new Map<string, THREE.Group>();
 const promiseCache = new Map<string, Promise<THREE.Group>>();
 
-// Yaw offsets per kind — GLB forward varies per asset; tuned for Guwahati test
-// Three's model forward after rotateX=PI/2 is +Y in mercator world; yaw is Z.
-// Offsets measured: ambulance -90, helicopter +90, boat 0, rescue_vehicle 0
 const YAW_OFFSET: Record<ResourceKind, number> = {
   ambulance: -Math.PI / 2,
   helicopter: Math.PI,
@@ -29,7 +26,6 @@ function getSharedMaterial(key: string, make: () => THREE.Material): THREE.Mater
 
 function makePlaceholder(kind: ResourceKind): THREE.Group {
   const g = new THREE.Group();
-  // Higher quality: smooth, beveled, 24+ segments, polished materials
   const bodyMat = getSharedMaterial(`body-${kind}`, () => new THREE.MeshStandardMaterial({
     color: kind === "helicopter" ? 0xe8f4f8 : kind === "boat" ? 0xdbeff5 : kind === "rescue_vehicle" ? 0xc0392b : 0xf8fafa,
     roughness: 0.38, metalness: 0.14,
@@ -72,7 +68,6 @@ function makePlaceholder(kind: ResourceKind): THREE.Group {
     win.position.set(1.15, 0.95, 0);
     g.add(win);
   } else if (kind === "boat") {
-    // Hull with slight taper using higher segments
     const hull = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.95, 1.82, 4, 1, 2), bodyMat);
     hull.position.y = 0.22;
     g.add(hull);
@@ -118,7 +113,6 @@ function makePlaceholder(kind: ResourceKind): THREE.Group {
     for (const z of [-0.92, 0.92]) for (const x of [-1.08, 1.08]) {
       const w = new THREE.Mesh(wheelGeo, darkMat);
       w.position.set(x, 0.24, z);
-      // hub
       const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.4, 12), new THREE.MeshStandardMaterial({ color: 0x8a8e91, metalness: 0.42, roughness: 0.38 }));
       hub.rotation.z = Math.PI / 2;
       hub.position.copy(w.position);
@@ -188,7 +182,6 @@ export function loadModel(kind: ResourceKind): Promise<THREE.Group> {
           const size = new THREE.Vector3();
           box.getSize(size);
           const maxDim = Math.max(size.x, size.y, size.z);
-          // Preserve high-poly detail — only normalize extreme sizes, keep aspect
           const expected = kind === "helicopter" ? 7 : kind === "boat" ? 5.2 : 4.6;
           if (maxDim > 18 || maxDim < 0.6) {
             const s = expected / maxDim;
@@ -198,17 +191,14 @@ export function loadModel(kind: ResourceKind): Promise<THREE.Group> {
             box2.getCenter(c2);
             scene.position.set(-c2.x, -box2.min.y + 0.02, -c2.z);
           } else {
-            // Tight centering keeps model crisp — no extra scale distortion
             scene.position.set(-center.x, -box.min.y + 0.02, -center.z);
           }
         }
-        // Keep original PBR materials — enhance for ops lighting without flattening
         scene.traverse(o => {
           const mesh = o as THREE.Mesh;
           if ((mesh as THREE.Mesh).isMesh) {
             const mat = mesh.material as THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
             if (mat) {
-              // Slightly boost for dark command centre — preserve high detail
               if ((mat as THREE.MeshStandardMaterial).roughness !== undefined) {
                 (mat as THREE.MeshStandardMaterial).roughness = Math.min(0.92, ((mat as THREE.MeshStandardMaterial).roughness ?? 0.5) * 0.92 + 0.08);
               }
@@ -216,7 +206,6 @@ export function loadModel(kind: ResourceKind): Promise<THREE.Group> {
             }
             mesh.castShadow = false;
             mesh.receiveShadow = false;
-            // Improve rendering: double-sided for thin geometry, no flat shading
             if (mat) (mat as THREE.MeshStandardMaterial).side = THREE.FrontSide;
           }
           if (/rotor/i.test(o.name)) o.name = `__rotor_${o.name}`;
@@ -227,7 +216,6 @@ export function loadModel(kind: ResourceKind): Promise<THREE.Group> {
       undefined,
       (err) => {
         console.warn(`[ModelLoader] ${kind} failed ${url}`, err);
-        // Do NOT poison cache — allow retry, return high-poly fallback directly
         promiseCache.delete(url);
         const ph = makePlaceholder(kind);
         resolve(cloneGroup(ph));

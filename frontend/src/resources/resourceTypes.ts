@@ -6,27 +6,25 @@ export type PrismResource = {
   kind: ResourceKind;
   lat: number;
   lng: number;
-  heading: number; // degrees 0-360, 0=north
+  heading: number;
   status: ResourceStatus;
-  speed?: number; // km/h
-  destination?: string; // incident id or label
+  speed?: number;
+  destination?: string;
   destLon?: number;
   destLat?: number;
   origin?: { lat: number; lng: number };
   altTarget?: { lat: number; lng: number };
   etaMin?: number;
   mission?: string;
-  dispatchDelay?: number; // seconds before this resource starts moving (staggered dispatch)
-  progress?: number; // 0..1 along the current curve
+  dispatchDelay?: number;
+  progress?: number;
 };
 
-/** Lightweight descriptor for backend GET /api/resources → PrismResource adapter */
 export function toPrismResource(raw: unknown): PrismResource | null {
   const r = raw as Record<string, unknown>;
   if (!r || typeof r.id !== "string") return null;
   const kind = String(r.kind ?? r.type ?? "ambulance");
   const validKinds: ResourceKind[] = ["ambulance", "helicopter", "boat", "rescue_vehicle"];
-  // Map backend status to a ResourceStatus the map can render
   const rawStatus = String(r.status ?? "available").toLowerCase();
   let status: ResourceStatus = "available";
   if (rawStatus === "deployed" || rawStatus === "en_route" || rawStatus === "dispatched") status = "en_route";

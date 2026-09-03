@@ -24,14 +24,14 @@ export function LeftPanel() {
             disasters: data.suspected_disasters,
           });
         }
-      } catch { /* ignore */ }
+      } catch {  }
     })();
     return () => { cancelled = true; };
   }, []);
 
   return (
     <aside className="panel prism-left" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      {/* === PLAN ON TOP — BIGGEST === */}
+      {}
       <div className="relative" style={{ flex: 1.6, display: "flex", flexDirection: "column", overflow: "hidden", background: "linear-gradient(180deg, rgba(204,255,0,0.04), transparent 22%), var(--bg-panel)" }}>
         <DotPattern width={14} height={14} cr={0.7} className="fill-[rgba(204,255,0,0.07)] opacity-30" />
         <div className="panel-header" style={{ background: "var(--bg-panel-2)" }}>
@@ -90,9 +90,9 @@ export function LeftPanel() {
             </div>
           )}
 
-          {/* UPCOMING WEATHER — directly under the plan list */}
+          {}
 
-          {/* UPCOMING WEATHER — under plan list */}
+          {}
           {weather && (
             <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 3, padding: "7px 8px", display: "flex", flexDirection: "column", gap: 5 }}>
               <div className="mono" style={{ fontSize: 8, letterSpacing: "0.1em", color: "var(--cyan)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -143,7 +143,7 @@ export function LeftPanel() {
         </div>
       </div>
 
-      {/* SECTOR OVERVIEW removed per request — empty space below */}
+      {}
       <div style={{ flex: "1 1 0", minHeight: 0, display: "flex", flexDirection: "column", borderTop: "1px solid var(--border)", background: "var(--bg-panel-2)", overflow: "hidden" }} />
     </aside>
   );

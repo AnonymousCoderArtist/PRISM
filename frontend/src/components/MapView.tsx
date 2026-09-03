@@ -31,7 +31,6 @@ export function MapView() {
   const isEmergency = simulationState === "running" && (planPhase === "connecting" || planPhase === "collecting" || planPhase === "verifying" || planPhase === "optimizing");
   const isDispatched = planPhase === "ready";
 
-  // keep last selected for fly-to incident
   const incidentsRef = useRef(incidents);
   incidentsRef.current = incidents;
   const movingRef = useRef(movingAssets);
@@ -51,7 +50,6 @@ export function MapView() {
       bearing: 0,
       attributionControl: false,
       maxPitch: 65,
-      // globe projection — cast to any because types lag behind runtime
       ...( { projection: { type: "globe" } } as unknown as Record<string, unknown>),
     } as maplibregl.MapOptions);
 
@@ -63,7 +61,6 @@ export function MapView() {
 
     map.on("load", async () => {
       try {
-        // Slow globe cinematic: true Earth → Guwahati (total ~6.2s, eased)
         setPhase("global");
         map.flyTo({ ...GUWAHATI_CAMERA.india, duration: 2100, essential: true, curve: 1.42, easing: (t: number) => 1 - Math.pow(1 - t, 3) });
         await delay(2200);
@@ -75,15 +72,12 @@ export function MapView() {
         await delay(2500);
         setPhase("guwahati");
 
-        // Load wards geojson
         const res = await fetch(WARDS_URL);
         if (!res.ok) throw new Error(`Failed to fetch wards: ${res.status}`);
         const geo = await res.json();
 
-        // Add source
         map.addSource("wards", { type: "geojson", data: geo });
 
-        // Fill — theme-aware (lime vs blue)
         map.addLayer({
           id: "wards-fill",
           type: "fill",
@@ -94,8 +88,6 @@ export function MapView() {
           },
         });
 
-        // Signal-loss cities — use the REAL ward polygons from the wards source
-        // Filter by sourcewardcode (the actual ward number like "33") since ward_lgd_code is a different large numeric ID
         const wardsSrc = map.getSource("wards") as unknown as { _data?: { features?: { properties?: { ward_lgd_code?: string | number; sourcewardcode?: string | number } }[] } } | undefined;
         const allFeatures = wardsSrc && wardsSrc._data && Array.isArray(wardsSrc._data.features) ? wardsSrc._data.features : [];
         const silentCodes = ["33", "41", "57"];
@@ -103,12 +95,10 @@ export function MapView() {
           if (!f.properties) return false;
           const swc = f.properties.sourcewardcode;
           const lgd = f.properties.ward_lgd_code;
-          // Also accept the last 2 digits of the LGD code (e.g. 69033 → "33")
           const lgdTail = typeof lgd === "number" ? String(lgd % 100) : typeof lgd === "string" ? (lgd.length > 2 ? lgd.slice(-2) : lgd) : "";
           return silentCodes.includes(String(swc)) || silentCodes.includes(lgdTail);
         });
         if (silentFeatures.length === 0) {
-          // Fallback: pick three wards from the dataset so the highlight is always visible
           silentFeatures = allFeatures.slice(0, 3);
         }
         const signalLossGeo = {
@@ -137,7 +127,6 @@ export function MapView() {
           },
         } as unknown as never);
 
-        // Highlight fill (hover/selected via filter)
         map.addLayer({
           id: "wards-fill-hover",
           type: "fill",
@@ -160,7 +149,6 @@ export function MapView() {
           filter: ["==", ["get", "ward_lgd_code"], -1],
         });
 
-        // Outline
         map.addLayer({
           id: "wards-line",
           type: "line",
@@ -184,7 +172,6 @@ export function MapView() {
           filter: ["==", ["get", "ward_lgd_code"], -1],
         });
 
-        // Priority overlay — shows prioritized order after verification (wow)
         map.addLayer({
           id: "wards-priority",
           type: "fill",
@@ -196,7 +183,6 @@ export function MapView() {
           filter: ["in", ["get", "ward_lgd_code"], ["literal", []]],
         });
 
-        // Add incident markers as GeoJSON source + circle layer — initially empty (verification-gated)
         const incidentGeo = {
           type: "FeatureCollection",
           features: incidentsRef.current.map(i => ({
@@ -250,9 +236,6 @@ export function MapView() {
           },
         });
 
-        // PMTiles-ready + Roads (local) — remaining tile rendering (next milestone): keep ready, optional
-        // We keep roads as optional overlay; if large file, we load lazily later. For now wards are primary.
-        // Admin centre headquarters
         const adminGeo = {
           type: "FeatureCollection",
           features: [
@@ -283,7 +266,6 @@ export function MapView() {
             "circle-blur": 0.7,
           },
         });
-        // label
         map.addLayer({
           id: "admin-label",
           type: "symbol",
@@ -301,7 +283,6 @@ export function MapView() {
           },
         });
 
-        // Moving assets (ambulance/helicopter) — after plan ready + trails
         const movingGeo = {
           type: "FeatureCollection",
           features: movingRef.current.map(m => ({
@@ -311,7 +292,6 @@ export function MapView() {
           })),
         } as unknown as never;
         map.addSource("moving-assets", { type: "geojson", data: movingGeo });
-        // trails behind — one LineString per asset
         const trailsGeo = {
           type: "FeatureCollection",
           features: movingRef.current
@@ -324,15 +304,10 @@ export function MapView() {
         } as unknown as never;
         map.addSource("moving-trails", { type: "geojson", data: trailsGeo });
 
-        // LEGACY circles/trails hidden — PRISM now uses only GLB models + predicted dashed route (no circles)
         map.addSource("moving-remaining", { type: "geojson", data: { type: "FeatureCollection", features: [] } as unknown as never });
-        // keep sources for state sync but do NOT add circle/line layers — user wants only GLB models
 
-        // ---- PRISM PNG resource layer — high-quality billboards (user requested PNG, no GLB) ----
-        // ensureRouteLayers is called later (after buildings) so the route is rendered ON TOP of 3D buildings
         void 0;
 
-        // Load PNG icons (background already removed & cropped to _icon.png)
         const pngDefs: { id: string; url: string }[] = [
           { id: "ambulance-icon", url: "/ambulance_icon.png" },
           { id: "ambulance-icon-flip-h", url: "/ambulance_icon_flip_h.png" },
@@ -357,20 +332,17 @@ export function MapView() {
             if (!map.hasImage(d.id)) map.addImage(d.id, img as unknown as HTMLImageElement, { pixelRatio: 2 } as never);
           } catch (e) {
             console.warn(`[PNG] failed ${d.url}`, e);
-            // fallback via map.loadImage (callback style)
             await new Promise<void>((done) => {
               (map as unknown as { loadImage: (u: string, cb: (err: unknown, img: HTMLImageElement) => void) => void }).loadImage(d.url, (err, im2) => {
                 if (!err && im2 && !map.hasImage(d.id)) {
-                  try { map.addImage(d.id, im2 as unknown as HTMLImageElement); } catch { /* ignore */ }
+                  try { map.addImage(d.id, im2 as unknown as HTMLImageElement); } catch {  }
                 }
                 done();
               });
             });
           }
         }
-        // GeoJSON source for PNG billboards
         map.addSource("prism-png-resources", { type: "geojson", data: { type: "FeatureCollection", features: [] } as unknown as never });
-        // Shadow for 3D lift — soft drop shadow under each PNG billboard (no stretch, original aspect)
         map.addLayer({
           id: "prism-png-shadow",
           type: "circle",
@@ -423,10 +395,8 @@ export function MapView() {
             "icon-opacity": 1,
           },
         } as unknown as never);
-        // (no extra selection circle per user request)
         pngReadyRef.current = true;
 
-        // Pulse animation on signal-loss cities
         let pulseT = 0;
         signalLossInterval = setInterval(() => {
           pulseT = (pulseT + 1) % 100;
@@ -436,7 +406,6 @@ export function MapView() {
           }
         }, 80);
 
-        // Click handlers for wards
         map.on("mousemove", "wards-fill", (e: maplibregl.MapLayerMouseEvent) => {
           if (!e.features?.[0]) return;
           const props = e.features[0].properties as Record<string, unknown>;
@@ -445,10 +414,8 @@ export function MapView() {
           const rawArea = (props as Record<string, unknown>)["st_area(shape)"] as number | undefined;
           const areaKm = rawArea ? (rawArea / 1_000_000).toFixed(2) + " km²" : "";
           const wardNameShort = name.replace("Guwahati (M Corp.) - ", "");
-          // cursor position for tooltip (client pixel relative to container)
           const rect = (map.getContainer() as HTMLElement).getBoundingClientRect();
           setCursor({ x: e.point.x, y: e.point.y });
-          // also keep legacy rect for future use if needed
           void rect;
           if (code !== hoverWard?.code) {
             setHoverWard({ code, name: wardNameShort, area: areaKm });
@@ -469,7 +436,6 @@ export function MapView() {
           const props = e.features[0].properties as Record<string, unknown>;
           const code = Number(props.ward_lgd_code);
           selectWard(code);
-          // fit to ward bounds roughly by easing to feature center
           if (e.lngLat) {
             map.flyTo({ center: [e.lngLat.lng, e.lngLat.lat], zoom: 12.2, pitch: 42, bearing: -10, duration: 900, essential: true });
           }
@@ -486,7 +452,6 @@ export function MapView() {
           }
         });
 
-        // Hover on a signal-loss city → "no signal" tooltip
         map.on("mousemove", "cities-signal-loss-fill", (e: maplibregl.MapLayerMouseEvent) => {
           if (!e.features?.[0]) return;
           const p = e.features[0].properties as Record<string, unknown>;
@@ -500,11 +465,9 @@ export function MapView() {
           setHoverSignalLoss(null);
           map.getCanvas().style.cursor = "";
         });
-        // Click on a signal-loss city → pin activity graph to that ward
         map.on("click", "cities-signal-loss-fill", (e: maplibregl.MapLayerMouseEvent) => {
           if (!e.features?.[0]) return;
           const p = e.features[0].properties as Record<string, unknown>;
-          // Prefer the actual ward number; fall back to the LGD code
           const swc = p.sourcewardcode;
           const lgd = p.ward_lgd_code;
           const lgdTail = typeof lgd === "number" ? lgd % 100 : typeof lgd === "string" ? parseInt(lgd.slice(-2), 10) : NaN;
@@ -538,26 +501,17 @@ export function MapView() {
           map.getCanvas().style.cursor = "";
         });
 
-        // legacy moving-circle handlers removed — only GLB models visible per request
-
-        // Fit bounds to Guwahati after load for precise framing
         const bounds = new maplibregl.LngLatBounds([91.62, 26.06], [91.88, 26.23]);
         map.fitBounds(bounds, { padding: 36, duration: 0 });
-        // then re-apply guwahati camera for cinematic pitch
         setTimeout(() => map.flyTo({ ...GUWAHATI_CAMERA.guwahati, duration: 900, essential: true }), 100);
 
         setLoaded(true);
 
-        // --- Secondary layers: roads + 3D buildings (zoom-triggered, wow for judges) ---
-        // Roads appear at z>=11, buildings extrude at z>=13
-        // Loaded async, not blocking primary wards
         (async () => {
           try {
-            // Roads
             const rRes = await fetch(ROADS_URL);
             if (rRes.ok) {
               const roads = await rRes.json();
-              // Filter to keep within Guwahati bbox to limit features if huge
               map.addSource("roads", { type: "geojson", data: roads });
               map.addLayer({
                 id: "roads-line",
@@ -584,7 +538,7 @@ export function MapView() {
                 filter: ["==", ["get", "highway"], "trunk"],
               });
             }
-          } catch { /* ignore roads load error */ }
+          } catch {  }
 
           try {
             const pRes = await fetch(POLYGONS_URL);
@@ -598,7 +552,6 @@ export function MapView() {
                 type: "FeatureCollection",
                 features: filtered as never[],
               };
-              // enrich with height
               for (const f of buildings.features as { properties: Record<string, unknown>; geometry: { type: string } }[]) {
                 const p = f.properties as Record<string, unknown>;
                 const lvlRaw = p["building:levels"] as string | undefined;
@@ -620,7 +573,6 @@ export function MapView() {
                   "fill-extrusion-opacity": ["interpolate", ["linear"], ["zoom"], 12.8, 0.0, 13.5, 0.82, 16, 0.96],
                 },
               } as never);
-              // building footprints thin line for low zoom
               map.addLayer({
                 id: "buildings-footprint",
                 type: "line",
@@ -634,42 +586,37 @@ export function MapView() {
                 },
               });
             }
-          } catch { /* ignore polygons error */ }
+          } catch {  }
         })();
 
-        // NOW add the route layer — on top of wards, incidents, buildings, and 3D extrusions
         try {
           ensureRouteLayers(map);
-          // Add the PNG icon layer LAST so it sits on top of everything (including the route)
           if (map.getLayer("prism-png-shadow")) {
             map.moveLayer("prism-png-shadow", "prism-route-remaining");
             map.moveLayer("prism-png-dot", "prism-png-shadow");
             map.moveLayer("prism-png-layer", "prism-png-dot");
           }
-          // Ensure route is visible on top of all building/road/incident layers
           if (map.getLayer("prism-route-remaining")) {
             map.moveLayer("prism-route-shadow", "incidents-circle");
             map.moveLayer("prism-route-remaining", "prism-route-shadow");
           }
-        } catch { /* ignore */ }
+        } catch {  }
       } catch (err) {
         setError((err as Error).message);
       }
     });
 
     map.on("error", (e: unknown) => {
-      // suppress style errors but surface
       console.error("MapLibre error", e);
     });
 
     return () => {
-      try { if (signalLossInterval) clearInterval(signalLossInterval); } catch { /* ignore */ }
+      try { if (signalLossInterval) clearInterval(signalLossInterval); } catch {  }
       map.remove();
       mapRef.current = null;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Keep wards colors updated (yellow lime theme only)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded() || !loaded) return;
@@ -680,10 +627,9 @@ export function MapView() {
       map.setPaintProperty("wards-line", "line-color", FILL.stroke);
       map.setPaintProperty("wards-line-selected", "line-color", FILL.selectedStroke);
       if (map.getLayer("wards-priority")) map.setPaintProperty("wards-priority", "fill-color", "#F5B942");
-    } catch { /* ignore */ }
+    } catch {  }
   }, [loaded, FILL]);
 
-  // Priority order on map: after verification, highlight wards with incidents
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded() || !loaded) return;
@@ -699,7 +645,6 @@ export function MapView() {
     map.setPaintProperty("wards-priority", "fill-opacity", op);
   }, [incidents, planPhase, loaded]);
 
-  // Reflect selectedWardCode to map filters
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded() || !loaded) return;
@@ -712,7 +657,6 @@ export function MapView() {
     }
   }, [selectedWardCode, loaded]);
 
-  // Keep incidents in sync — verification-gated red/green dots appear only after backend verification
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded() || !loaded) return;
@@ -729,7 +673,6 @@ export function MapView() {
     src.setData(fc as never);
   }, [incidents, loaded]);
 
-  // Keep moving assets in sync — ambulance/helicopter simulation after plan + trails + ETA + remaining
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded() || !loaded) return;
@@ -756,7 +699,6 @@ export function MapView() {
       } as unknown as never;
       trailSrc.setData(trails as never);
     }
-    // remaining dashed path (curved) to show what's left
     const remSrc = map.getSource("moving-remaining") as maplibregl.GeoJSONSource | undefined;
     if (remSrc) {
       const makeRemaining = (m: (typeof movingAssets)[number]) => {
@@ -790,7 +732,6 @@ export function MapView() {
     movingRef.current = movingAssets;
   }, [movingAssets, loaded]);
 
-  // Keep icons as is — no rotation/orientation towards path, straight movement, original quality, small
   const getPngIcon = (kind: string): string => {
     if (kind === "boat") return "boat-icon";
     if (kind === "helicopter") return "helicopter-icon";
@@ -816,8 +757,7 @@ export function MapView() {
       }),
     } as unknown as never;
     src.setData(fc as never);
-    try { updateRoutes(map, prismResources.filter(r => r.status === "en_route" || r.status === "active" || r.status === "arrived"), resourceTrails); } catch { /* ignore */ }
-    // Update the trail lines too
+    try { updateRoutes(map, prismResources.filter(r => r.status === "en_route" || r.status === "active" || r.status === "arrived"), resourceTrails); } catch {  }
     try {
       const trailSrc = map.getSource("moving-trails") as maplibregl.GeoJSONSource | undefined;
       if (trailSrc) {
@@ -833,20 +773,18 @@ export function MapView() {
         };
         trailSrc.setData(trails as never);
       }
-    } catch { /* ignore */ }
+    } catch {  }
   }, [prismResources, resourceTrails, loaded]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded || !pngReadyRef.current) return;
-    // highlight selected via filter (circle layer) + icon-size pop via feature-state? keep simple filter
     if (selectedResource) {
       const curZ = map.getZoom();
       if (curZ < 12.5) map.flyTo({ center: [selectedResource.lng, selectedResource.lat], zoom: 13.2, pitch: 52, bearing: -10, duration: 700, essential: true });
     }
   }, [selectedResourceId, selectedResource, loaded]);
 
-  // PNG icon hover — show where it's going, destination and ETA
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded || !pngReadyRef.current) return;
@@ -855,7 +793,6 @@ export function MapView() {
       const id = (f?.properties as { id?: string } | undefined)?.id;
       if (id) {
         selectResource(id);
-        // @ts-ignore
         if (e.originalEvent) (e.originalEvent as MouseEvent).stopPropagation?.();
       }
     };
@@ -893,13 +830,12 @@ export function MapView() {
     map.on("mousemove", "prism-png-selected", onHover as never);
     map.on("mouseleave", "prism-png-selected", onLeave as never);
     return () => {
-      try { map.off("click", "prism-png-layer", onClick as never); } catch { /* ignore */ }
-      try { map.off("mousemove", "prism-png-layer", onHover as never); } catch { /* ignore */ }
-      try { map.off("mouseleave", "prism-png-layer", onLeave as never); } catch { /* ignore */ }
+      try { map.off("click", "prism-png-layer", onClick as never); } catch {  }
+      try { map.off("mousemove", "prism-png-layer", onHover as never); } catch {  }
+      try { map.off("mouseleave", "prism-png-layer", onLeave as never); } catch {  }
     };
   }, [loaded, selectResource]);
 
-  // Replay flight (same slow globe curve)
   const replay = () => {
     const map = mapRef.current;
     if (!map) return;
@@ -925,18 +861,18 @@ export function MapView() {
         </div>
       )}
       <div className="map-fade-edges" style={{ zIndex: 1 }} />
-      {/* HUD decorations — below text */}
+      {}
       <div className="hud-grid" style={{ zIndex: 1 }} />
       <div className="hud-scanline" style={{ zIndex: 1 }} />
       <div className="hud-vignette" style={{ zIndex: 1 }} />
       <div className="hud-crosshair" style={{ zIndex: 1 }} />
-      {/* outer frame */}
+      {}
       <div style={{ position: "absolute", inset: 8, border: "1px solid rgba(204,255,0,0.08)", pointerEvents: "none", borderRadius: 2, zIndex: 1 }} />
       <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 180, height: 2, background: "linear-gradient(90deg, transparent, rgba(204,255,0,0.55), transparent)", pointerEvents: "none", zIndex: 1 }} />
 
-      {/* HUD Overlay — must be ABOVE fade/grid, grid-aligned corners */}
+      {}
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 4 }}>
-        {/* Top-left HUD */}
+        {}
         <div style={{
           position: "absolute", top: 10, left: 10,
           background: "rgba(5,6,7,0.92)", border: "1px solid var(--border)",
@@ -963,7 +899,7 @@ export function MapView() {
           )}
         </div>
 
-        {/* Bottom-center coords */}
+        {}
         <div style={{
           position: "absolute", bottom: 10, left: "50%", transform: "translateX(-50%)",
           background: "rgba(5,6,7,0.88)", border: "1px solid var(--border)", borderRadius: 4,
@@ -977,7 +913,7 @@ export function MapView() {
           </span>
         </div>
 
-        {/* Right HUD — ward hover with area (corner) */}
+        {}
         {hoverWard && (
           <div style={{
             position: "absolute", top: 10, right: 10,
@@ -994,7 +930,7 @@ export function MapView() {
           </div>
         )}
 
-        {/* Cursor-anchored tooltip */}
+        {}
         {hoverWard && cursor && (
           <div style={{
             position: "absolute",
@@ -1086,7 +1022,7 @@ export function MapView() {
         )}
       </div>
 
-      {/* Attribution is handled by control, but ensure OSM credit remains visible via default control */}
+      {}
     </div>
   );
 }

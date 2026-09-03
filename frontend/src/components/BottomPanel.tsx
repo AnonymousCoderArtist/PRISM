@@ -7,11 +7,9 @@ export function BottomPanel() {
   const { activity, selectedWardCode } = usePrism();
   const accent = "#CCFF00";
   const accentDim = "rgba(204,255,0,0.18)";
-  // Silent wards 33 / 41 / 57 — pinned activity graph is forced to flat
   const silentWards = ["33", "41", "57"];
 
   const isFlat = useMemo(() => {
-    // If user pinned a known silent ward, force flat
     if (selectedWardCode != null && silentWards.includes(String(selectedWardCode))) return true;
     if (activity.length < 10) return false;
     const last = activity.slice(-10);
@@ -19,10 +17,9 @@ export function BottomPanel() {
     const min = Math.min(...last);
     const variance = max - min;
     const avg = last.reduce((a, b) => a + b, 0) / last.length;
-    return variance < 1.2 && avg < 2.5; // silent = low + flat
+    return variance < 1.2 && avg < 2.5;
   }, [activity, selectedWardCode]);
 
-  // For flat (silent) wards, show a perfectly straight horizontal line
   const chartData = useMemo(() => {
     if (isFlat) return Array(activity.length || 30).fill(0);
     return activity;
@@ -85,7 +82,7 @@ export function BottomPanel() {
 
   return (
     <div className="panel prism-bottom" style={{ borderTop: "1px solid var(--border)", display: "grid", gridTemplateColumns: "1fr 320px", overflow: "hidden" }}>
-      {/* Left 70% : Activity Graph */}
+      {}
       <div style={{ borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div className="panel-header" style={{ background: "var(--bg-panel-2)" }}>
           <span className="panel-title"><Clock size={12} /> ACTIVITY TRACK — {selectedWardCode ? `WARD ${selectedWardCode}` : "GLOBAL"}</span>
@@ -106,7 +103,7 @@ export function BottomPanel() {
         </div>
       </div>
 
-      {/* Right 30% : Void / Legend */}
+      {}
       <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--bg-panel-2)" }}>
         <div className="panel-header">
           <span className="panel-title"><Activity size={12} /> SIGNAL DIAGNOSTICS</span>

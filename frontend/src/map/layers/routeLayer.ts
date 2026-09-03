@@ -2,18 +2,12 @@ import * as maplibregl from "maplibre-gl";
 import type { PrismResource } from "../../resources/resourceTypes";
 import { buildRouteCollection } from "../../resources/ResourceRoutes";
 
-/**
- * Predicted route only — clean, no extra lines underneath (per user request).
- * Single dashed line from current position to destination for en_route resources.
- */
-
 export function ensureRouteLayers(map: maplibregl.Map): void {
   if (map.getSource("prism-resource-routes")) return;
   map.addSource("prism-resource-routes", {
     type: "geojson",
     data: { type: "FeatureCollection", features: [] } as unknown as never,
   });
-  // shadow for 3D airplane-like lift (soft, below)
   map.addLayer({
     id: "prism-route-shadow",
     type: "line",
@@ -28,7 +22,6 @@ export function ensureRouteLayers(map: maplibregl.Map): void {
     },
     layout: { "line-cap": "round", "line-join": "round" } as never,
   } as never);
-  // predicted curved dashed line — 3D live over map
   map.addLayer({
     id: "prism-route-remaining",
     type: "line",
@@ -59,7 +52,6 @@ export function updateRoutes(map: maplibregl.Map, resources: PrismResource[], _t
   const remSrc = map.getSource("prism-resource-routes") as maplibregl.GeoJSONSource | undefined;
   if (!remSrc) return;
   const remaining = buildRouteCollection(resources);
-  // Show routes for any resource that is moving or has moved (en_route, active, arrived) — keeps path visible after plan
   const filteredRemaining = {
     type: "FeatureCollection" as const,
     features: remaining.features.filter((f: unknown) => {

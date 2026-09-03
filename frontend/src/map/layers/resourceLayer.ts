@@ -8,8 +8,8 @@ import { animateModel, createAnimState, type AnimState } from "../../resources/R
 type Managed = {
   id: string;
   kind: ResourceKind;
-  outer: THREE.Group; // mercator position + scale
-  inner: THREE.Group; // model with upright correction + heading
+  outer: THREE.Group;
+  inner: THREE.Group;
   lng: number;
   lat: number;
   targetLng: number;
@@ -51,8 +51,7 @@ export class Resource3DLayer implements CustomLayerInterface {
   private disposed = false;
   private moveSpeed = 0.035;
 
-  // tuning for fixed screen size (Google Maps style) — models appear ~48px tall at all zooms
-  private baseScaleFactor = 32; // mercator units * this = world size; then divided by zoom factor for constant pixels
+  private baseScaleFactor = 32;
   private heliBoost = 1.35;
   private boatBoost = 1.15;
 
@@ -108,7 +107,7 @@ export class Resource3DLayer implements CustomLayerInterface {
       const canvas = this.map?.getCanvas();
       const h = (this as unknown as { _clickHandler?: (e: MouseEvent) => void })._clickHandler;
       if (canvas && h) canvas.removeEventListener("click", h);
-    } catch { /* ignore */ }
+    } catch {  }
     this.managed.forEach(m => this.scene.remove(m.outer));
     this.managed.clear();
     this.renderer?.dispose();
@@ -173,10 +172,10 @@ export class Resource3DLayer implements CustomLayerInterface {
   }
 
   private altitudeForKind(kind: ResourceKind): number {
-    if (kind === "helicopter") return 22; // clear of 42m buildings
-    if (kind === "boat") return 1.4; // water level, no ground sink
+    if (kind === "helicopter") return 22;
+    if (kind === "boat") return 1.4;
     if (kind === "rescue_vehicle") return 3.2;
-    return 3.0; // ambulance
+    return 3.0;
   }
 
   private async ensureModel(r: PrismResource): Promise<void> {
@@ -188,10 +187,7 @@ export class Resource3DLayer implements CustomLayerInterface {
       inner = getPlaceholder(r.kind);
     }
     inner.name = `inner-${r.id}`;
-    // Upright correction: rotate model to stand on ground (MapLibre mercator Z is up, Three Y is up)
-    // Standard: rotateX = PI/2 makes Three Y → mercator Z
     inner.rotation.set(Math.PI / 2, 0, 0);
-    // Heading will be applied on Z after X rotation (yaw around vertical)
     const yawOffset = getYawOffset(r.kind);
     inner.userData.yawOffset = yawOffset;
 
@@ -236,7 +232,6 @@ export class Resource3DLayer implements CustomLayerInterface {
     outer.scale.set(s, s, s);
     const yawOffset: number = (inner.userData.yawOffset as number) ?? 0;
     inner.rotation.z = THREE.MathUtils.degToRad(heading) + yawOffset;
-    // Keep model base at outer's altitude — no extra inner Z sink
     inner.position.z = 0;
     inner.position.y = 0;
   }
@@ -249,12 +244,10 @@ export class Resource3DLayer implements CustomLayerInterface {
         const t = ease(mg.lerpT);
         const nlng = lerp(mg.startLng, mg.targetLng, t);
         const nlat = lerp(mg.startLat, mg.targetLat, t);
-        // Derive heading from actual motion delta for correct orientation on path
         const dLng = nlng - mg.lng;
         const dLat = nlat - mg.lat;
         if (Math.abs(dLng) > 1e-8 || Math.abs(dLat) > 1e-8) {
           const motionDeg = (Math.atan2(dLng, dLat) * 180) / Math.PI;
-          // blend heading toward motion direction tightly when moving
           mg.heading = lerpAngle(mg.heading, motionDeg, 0.22);
           mg.targetHeading = motionDeg;
           mg.startHeading = mg.heading;
@@ -268,9 +261,7 @@ export class Resource3DLayer implements CustomLayerInterface {
         mg.heading = lerpAngle(mg.heading, mg.targetHeading, Math.min(1, dt * 4));
         moved = true;
       }
-      // Even when not interpolating, keep mercator position/heading in sync (also handles zoom-scale)
       if (moved || true) {
-        // always reapply to handle zoom-based scale change each frame
         this.applyMercator(mg.outer, mg.inner, mg.lng, mg.lat, mg.heading, mg.kind);
       }
       animateModel(mg.inner, mg.kind, dt, mg.animState);

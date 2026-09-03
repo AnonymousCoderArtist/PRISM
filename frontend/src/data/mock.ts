@@ -1,6 +1,5 @@
 import type { Incident, Resource, Report, Source } from "../types/prism";
 
-// Deterministic mock data for Guwahati — used until backend is ready
 export const mockIncidents: Incident[] = [
   {
     id: "INC-001",
@@ -88,13 +87,11 @@ export const mockSources: Source[] = [
   { id: "SRC-06", type: "field", label: "NDRF Team 4", detail: "En route to Pandu — ETA 18 min", time: "09:39", wardCode: 69118, confidence: 0.95 },
 ];
 
-// Deterministic activity time series per ward (last 30 ticks)
-// Base pattern + flatline for void wards
 export function makeActivitySeries(seed: number, flat = false): number[] {
   const arr: number[] = [];
   let v = 18 + (seed % 12);
   for (let i = 0; i < 30; i++) {
-    if (flat && i > 12) v = 1 + Math.random() * 0.6; // silence
+    if (flat && i > 12) v = 1 + Math.random() * 0.6;
     else v = Math.max(1, v + (Math.random() - 0.48) * 6 + Math.sin(i / 3) * 2);
     arr.push(Math.round(v * 10) / 10);
   }
@@ -103,7 +100,7 @@ export function makeActivitySeries(seed: number, flat = false): number[] {
 export const wardActivity: Record<number, number[]> = {
   69077: makeActivitySeries(77, false),
   69092: makeActivitySeries(92, false),
-  69102: makeActivitySeries(102, true), // this one will be flat -> void detection
+  69102: makeActivitySeries(102, true),
   69118: makeActivitySeries(118, false),
 };
 export const globalActivity = makeActivitySeries(0, false);
@@ -117,7 +114,6 @@ export const mockStats = {
   reportsLastHour: 46,
 };
 
-// Pools for simulation streaming
 export const simReportPool: Omit<Report, "id" | "time">[] = [
   { incidentId: "INC-001", wardCode: 69077, text: "New inflow at Bakery Chowk, water rising 8cm/hr", source: "field", verified: false },
   { incidentId: "INC-002", wardCode: 69092, text: "JCB deployed to GS Road, clearance 30% done", source: "field", verified: true },

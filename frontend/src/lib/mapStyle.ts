@@ -1,12 +1,8 @@
-// Dark Matter style (Carto) — OSM attribution preserved, no API key needed
-// Alternative fallback: demotiles.maplibre.org/style.json
 export const DARK_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
-// Backup style if dark-matter is blocked
 export const LIGHT_DEMO_STYLE = "https://demotiles.maplibre.org/style.json";
 
 export const GUWAHATI_CAMERA = {
-  // Slower globe entry: start truly at globe then drift to Guwahati
   global: { center: [78.9629, 20.5937] as [number, number], zoom: 1.18, pitch: 0, bearing: -8 },
   india:  { center: [78.9629, 20.5937] as [number, number], zoom: 3.65, pitch: 10, bearing: -4 },
   assam:  { center: [92.9376, 26.2006] as [number, number], zoom: 6.55, pitch: 22, bearing: -6 },

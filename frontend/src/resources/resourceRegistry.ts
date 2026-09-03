@@ -1,9 +1,5 @@
 import type { ResourceKind } from "./resourceTypes";
 
-/**
- * Reusable model registry — drop GLB files into /public/models without changing app logic.
- * If a model file is missing, loader falls back to procedural placeholder geometry.
- */
 export const RESOURCE_MODELS: Record<ResourceKind, string> = {
   ambulance: "/models/ambulance.glb",
   helicopter: "/models/helicopter.glb",
@@ -11,7 +7,6 @@ export const RESOURCE_MODELS: Record<ResourceKind, string> = {
   rescue_vehicle: "/models/rescue_vehicle.glb",
 };
 
-// Placeholder fallback — firetruck alias (not present)
 export const RESOURCE_ALIASES: Record<string, ResourceKind> = {
   rescue_boat: "boat",
   rescueBoat: "boat",
@@ -27,11 +22,10 @@ export const RESOURCE_LABELS: Record<ResourceKind, string> = {
   rescue_vehicle: "RESCUE VEHICLE",
 };
 
-/** Status visual semantics — restrained professional palette */
 export const STATUS_COLORS: Record<string, string> = {
   available: "#8A9698",
-  en_route: "#CCFF00", // lime
-  active: "#F5B942", // amber
+  en_route: "#CCFF00",
+  active: "#F5B942",
   arrived: "#46E09B",
   critical: "#FF4D4D",
   offline: "#4A5254",

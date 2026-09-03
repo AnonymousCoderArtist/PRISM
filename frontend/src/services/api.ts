@@ -2,7 +2,6 @@ import type { Incident, Report, Resource, WardProperties } from "../types/prism"
 import type { PrismResource } from "../resources/resourceTypes";
 import { toPrismResource } from "../resources/resourceTypes";
 
-// Backend raw shapes (FastAPI Pydantic schemas)
 export type BackendIncident = {
   id: string;
   title: string;
