@@ -59,10 +59,7 @@ html, body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(1200px 600px at 50% -10%, rgba(204,255,0,0.04), transparent 60%),
-    radial-gradient(900px 500px at 100% 0%, rgba(72,216,255,0.04), transparent 55%),
-    var(--bg);
+  background: var(--bg);
 }
 
 /* Scrollbar */
@@ -115,11 +112,6 @@ html, body {
   background: linear-gradient(90deg, rgba(204,255,0,0.06), transparent 55%), var(--bg-panel-2);
   position: relative;
 }
-.panel-header::after {
-  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
-  background: linear-gradient(90deg, rgba(204,255,0,0.35), transparent 60%);
-  opacity: 0.6;
-}
 .panel-title {
   font-family: var(--font-mono);
   font-size: 9.5px; letter-spacing: 0.15em; font-weight: 700;
@@ -129,7 +121,6 @@ html, body {
 .panel-title-dot {
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--lime); box-shadow: 0 0 10px rgba(204,255,0,0.85);
-  animation: pulse 1.8s infinite;
 }
 .panel-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px; }
 

@@ -15,16 +15,11 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
       justifyContent: "space-between",
       background: "linear-gradient(90deg,#080A0B 0%, #0A0F0F 100%)",
       borderBottom: "1px solid var(--border)",
-      borderTop: "1.5px solid rgba(204,255,0,0.35)",
       padding: "0 10px 0 14px",
       zIndex: 20,
       position: "relative",
       overflow: "hidden",
     }}>
-      <div style={{ position: "absolute", left: 0, right: 0, top: -1, height: 1, background: "linear-gradient(90deg, transparent, rgba(204,255,0,0.55), transparent)", opacity: 0.7, pointerEvents: "none" }} />
-      {}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: "radial-gradient(rgba(204,255,0,0.9) 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
-      {}
       <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div className="shadow-[0_2px_10px_rgba(204,255,0,0.12),0_1px_2px_rgba(0,0,0,0.6)]" style={{ width: 36, height: 36, display: "grid", placeItems: "center", background: "rgba(204,255,0,0.08)", border: "1px solid rgba(204,255,0,0.2)", borderRadius: 4 }}>
@@ -67,7 +62,7 @@ export function TopBar({ onOpenResources, view }: { onOpenResources?: () => void
             color: "var(--lime)", background: "var(--lime-dim)", border: "1px solid var(--lime-border)",
             padding: "3px 7px", borderRadius: 2, display: "inline-flex", alignItems: "center", gap: 6,
           }}>
-            <span style={{ width: 6, height: 6, borderRadius: 999, background: "var(--lime)", boxShadow: "0 0 8px rgba(204,255,0,0.7)", animation: "pulse 1.6s infinite" }} />
+            <span style={{ width: 6, height: 6, borderRadius: 999, background: "var(--lime)", boxShadow: "0 0 8px rgba(204,255,0,0.7)" }} />
             SIM
           </span>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.1em", color: "var(--text-muted)" }}>WARD 60 • LOCAL</span>

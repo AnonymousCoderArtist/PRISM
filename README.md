@@ -184,6 +184,25 @@ PRISM/
 - OpenStreetMap attribution must remain visible wherever OSM-derived data is rendered.
 - Never work directly on `main`. Branch names: `backend/<feature>` and `frontend/<feature>`.
 
+## Screenshots
+
+### Dashboard
+![Dashboard](screenshots/dashboard.png)
+
+### Simulation Running
+![Simulation](screenshots/simulation.png)
+
+### Resources Page
+![Resources](screenshots/resources.png)
+
+### Planning View
+![Planning](screenshots/planning.png)
+
+## Contribution
+
+- **Frontend**: Built entirely by me (UI components, MapLibre integration, state management, CSS design system, panel layouts, resource tracking).
+- **Backend**: AI assisted with parts of the backend code (routing, services, simulation engine, AI integration).
+
 ## Documentation
 
 - `MVP.md` — product concept, architecture, API contract, demo plan

@@ -76,16 +76,13 @@ function Inner({ onClose }: { onClose: () => void }) {
         </div>
 
         <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden", position: "relative", minHeight: 160, display: "grid", placeItems: "center" }}>
-          <div style={{ position: "absolute", inset: 8, border: "1px dashed rgba(204,255,0,0.18)", borderRadius: 4 }} />
-          <div style={{ textAlign: "center" }}>
             <div style={{ width: 72, height: 72, margin: "0 auto", border: "1.5px solid var(--lime)", background: "rgba(204,255,0,0.10)", display: "grid", placeItems: "center", borderRadius: 4 }}>
               <Building2 size={28} style={{ color: "var(--lime)" }} />
             </div>
             <div className="mono" style={{ fontSize: 10, fontWeight: 800, color: "var(--text)", marginTop: 8, letterSpacing: "0.08em" }}>EOC — CENTRAL COMMAND</div>
             <div className="mono" style={{ fontSize: 8, color: "var(--text-muted)", marginTop: 3 }}>Dispur • coordination for 60 wards</div>
             <div className="mono" style={{ fontSize: 8, color: "var(--lime)", marginTop: 6, display: "inline-flex", alignItems: "center", gap: 4, border: "1px solid var(--lime-border)", padding: "2px 6px", borderRadius: 2 }}><Radio size={10} /> WS /ws/live • feeding live</div>
-          </div>
-          <div className="mono" style={{ position: "absolute", bottom: 6, left: 50, transform: "translateX(-50%)", fontSize: 8, color: "var(--text-faint)", display: "flex", alignItems: "center", gap: 6 }}><MapPinned size={10} /> 26.143°N 91.789°E • HQ marker on map</div>
+            <div className="mono" style={{ position: "absolute", bottom: 6, left: 50, transform: "translateX(-50%)", fontSize: 8, color: "var(--text-faint)", display: "flex", alignItems: "center", gap: 6 }}><MapPinned size={10} /> 26.143°N 91.789°E • HQ marker on map</div>
         </div>
 
         <div style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 4, padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -104,7 +101,7 @@ function Inner({ onClose }: { onClose: () => void }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10 }}>
         {inventory.map((it, idx) => (
-          <motion.div key={it.label} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }} style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderLeft: `2.5px solid ${it.color}`, borderRadius: 4, padding: "10px 11px" }}>
+          <motion.div key={it.label} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }} style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 4, padding: "10px 11px" }}>
             <div className="mono" style={{ fontSize: 9, letterSpacing: "0.1em", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6 }}><it.icon size={12} style={{ color: it.color }} /> {it.label}</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: it.color, marginTop: 4, lineHeight: 1 }}>{it.count}</div>
             <div className="mono" style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 4, lineHeight: 1.35 }}>{it.detail}</div>
@@ -126,7 +123,7 @@ function Inner({ onClose }: { onClose: () => void }) {
             const Icon = kindIcon(r.kind);
             const col = statusColor(r.status);
             return (
-              <div key={r.id} style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderLeft: `2px solid ${col}`, borderRadius: 3, padding: "7px 9px" }}>
+              <div key={r.id} style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: 3, padding: "7px 9px" }}>
                 <div className="mono" style={{ fontSize: 9, color: "var(--text)", display: "flex", alignItems: "center", gap: 6, fontWeight: 700 }}>
                   <Icon size={12} style={{ color: col }} />
                   <span>{r.id}</span>

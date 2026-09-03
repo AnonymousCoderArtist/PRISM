@@ -7,7 +7,7 @@ export function BottomPanel() {
   const { activity, selectedWardCode } = usePrism();
   const accent = "#CCFF00";
   const accentDim = "rgba(204,255,0,0.18)";
-  const silentWards = ["33", "41", "57"];
+  const silentWards = ["69077", "69092"];
 
   const isFlat = useMemo(() => {
     if (selectedWardCode != null && silentWards.includes(String(selectedWardCode))) return true;

@@ -81,7 +81,7 @@ export function LeftPanel() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {plan.map(r => (
-                <motion.div key={r.id} layout initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.45 }} style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderLeft: `2.5px solid ${r.color}`, borderRadius: 3, padding: "7px 8px" }}>
+                <motion.div key={r.id} layout initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.45 }} style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 3, padding: "7px 8px" }}>
                   <div className="mono" style={{ fontSize: 8, letterSpacing: "0.1em", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 5 }}><Route size={10} /> {r.id} — {r.status}</div>
                   <div style={{ fontSize: 11, color: "var(--text)", fontWeight: 650, marginTop: 3 }}>{r.to}</div>
                   <div className="mono" style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 1 }}>{r.eta} • {r.resId}</div>
@@ -122,7 +122,7 @@ export function LeftPanel() {
               <AlertTriangle size={14} style={{ color: "var(--purple)", flexShrink: 0 }} />
               <div>
                 <div className="mono" style={{ fontSize: 10, fontWeight: 800, color: "var(--purple)", letterSpacing: "0.1em" }}>INFORMATION VOID</div>
-                <div className="mono" style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 2, lineHeight: 1.45 }}>Wards 33 / 41 / 57 silent — flatline detected</div>
+                <div className="mono" style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 2, lineHeight: 1.45 }}>Wards 1 / 16 silent — flatline detected</div>
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5 }}>
@@ -132,7 +132,7 @@ export function LeftPanel() {
               </div>
               <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 3, padding: "6px 4px", textAlign: "center" }}>
                 <div className="mono" style={{ fontSize: 7, letterSpacing: "0.08em", color: "var(--text-muted)" }}>SILENT</div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "var(--amber)", lineHeight: 1, marginTop: 2 }}>3</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "var(--amber)", lineHeight: 1, marginTop: 2 }}>2</div>
               </div>
               <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 3, padding: "6px 4px", textAlign: "center" }}>
                 <div className="mono" style={{ fontSize: 7, letterSpacing: "0.08em", color: "var(--text-muted)" }}>STATUS</div>
@@ -142,9 +142,6 @@ export function LeftPanel() {
           </div>
         </div>
       </div>
-
-      {}
-      <div style={{ flex: "1 1 0", minHeight: 0, display: "flex", flexDirection: "column", borderTop: "1px solid var(--border)", background: "var(--bg-panel-2)", overflow: "hidden" }} />
     </aside>
   );
 }

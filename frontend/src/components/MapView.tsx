@@ -5,6 +5,7 @@ import { DARK_STYLE, GUWAHATI_CAMERA, WARD_FILL } from "../lib/mapStyle";
 import { usePrism } from "../store/PrismContext";
 import { EmergencyBanner } from "./EmergencyBanner";
 import { ensureRouteLayers, updateRoutes } from "../map/layers/routeLayer";
+import { curvePoints } from "../resources/ResourceRoutes";
 
 const WARDS_URL = "/data/guwahati/geojson/wards_guwahati.geojson";
 const ROADS_URL = "/data/guwahati/geojson/roads.geojson";
@@ -35,6 +36,7 @@ export function MapView() {
   incidentsRef.current = incidents;
   const movingRef = useRef(movingAssets);
   movingRef.current = movingAssets;
+  const routeCurvesRef = useRef<Map<string, [number, number][]>>(new Map());
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -90,13 +92,12 @@ export function MapView() {
 
         const wardsSrc = map.getSource("wards") as unknown as { _data?: { features?: { properties?: { ward_lgd_code?: string | number; sourcewardcode?: string | number } }[] } } | undefined;
         const allFeatures = wardsSrc && wardsSrc._data && Array.isArray(wardsSrc._data.features) ? wardsSrc._data.features : [];
-        const silentCodes = ["33", "41", "57"];
+        const silentCodes = ["69077", "69092"];
         let silentFeatures = allFeatures.filter(f => {
           if (!f.properties) return false;
-          const swc = f.properties.sourcewardcode;
-          const lgd = f.properties.ward_lgd_code;
-          const lgdTail = typeof lgd === "number" ? String(lgd % 100) : typeof lgd === "string" ? (lgd.length > 2 ? lgd.slice(-2) : lgd) : "";
-          return silentCodes.includes(String(swc)) || silentCodes.includes(lgdTail);
+          const swc = String(f.properties.sourcewardcode ?? "");
+          const lgd = String(f.properties.ward_lgd_code ?? "");
+          return silentCodes.includes(swc) || silentCodes.includes(lgd);
         });
         if (silentFeatures.length === 0) {
           silentFeatures = allFeatures.slice(0, 3);
@@ -292,17 +293,7 @@ export function MapView() {
           })),
         } as unknown as never;
         map.addSource("moving-assets", { type: "geojson", data: movingGeo });
-        const trailsGeo = {
-          type: "FeatureCollection",
-          features: movingRef.current
-            .filter(m => (m.trail?.length ?? 0) > 1)
-            .map(m => ({
-              type: "Feature",
-              geometry: { type: "LineString", coordinates: (m as unknown as { trail: [number, number][] }).trail },
-              properties: { id: m.id, kind: m.kind },
-            })),
-        } as unknown as never;
-        map.addSource("moving-trails", { type: "geojson", data: trailsGeo });
+        map.addSource("moving-trails", { type: "geojson", data: { type: "FeatureCollection", features: [] } as unknown as never });
 
         map.addSource("moving-remaining", { type: "geojson", data: { type: "FeatureCollection", features: [] } as unknown as never });
 
@@ -468,12 +459,9 @@ export function MapView() {
         map.on("click", "cities-signal-loss-fill", (e: maplibregl.MapLayerMouseEvent) => {
           if (!e.features?.[0]) return;
           const p = e.features[0].properties as Record<string, unknown>;
-          const swc = p.sourcewardcode;
-          const lgd = p.ward_lgd_code;
-          const lgdTail = typeof lgd === "number" ? lgd % 100 : typeof lgd === "string" ? parseInt(lgd.slice(-2), 10) : NaN;
-          const code = swc ? Number(swc) : lgdTail;
-          if (code && !isNaN(code)) {
-            selectWard(code);
+          const lgd = Number(p.ward_lgd_code);
+          if (lgd && !isNaN(lgd)) {
+            selectWard(lgd);
             const center = (e as unknown as { lngLat?: maplibregl.LngLat }).lngLat;
             if (center) map.flyTo({ center: [center.lng, center.lat], zoom: 12.4, pitch: 42, duration: 800, essential: true });
           }
@@ -587,18 +575,35 @@ export function MapView() {
               });
             }
           } catch {  }
+
+        if (!map.getLayer("moving-trails-line")) {
+          map.addLayer({
+            id: "moving-trails-line",
+            type: "line",
+            source: "moving-trails",
+            paint: {
+              "line-color": "#FF4D4D",
+              "line-width": 2.5,
+              "line-opacity": 0.7,
+              "line-dasharray": [2, 3],
+            },
+            layout: { "line-cap": "round", "line-join": "round" } as never,
+          } as never);
+        }
         })();
 
         try {
           ensureRouteLayers(map);
-          if (map.getLayer("prism-png-shadow")) {
-            map.moveLayer("prism-png-shadow", "prism-route-remaining");
-            map.moveLayer("prism-png-dot", "prism-png-shadow");
-            map.moveLayer("prism-png-layer", "prism-png-dot");
-          }
-          if (map.getLayer("prism-route-remaining")) {
+          if (map.getLayer("prism-route-remaining") && map.getLayer("incidents-circle")) {
             map.moveLayer("prism-route-shadow", "incidents-circle");
             map.moveLayer("prism-route-remaining", "prism-route-shadow");
+          }
+          if (map.getLayer("moving-trails-line") && map.getLayer("prism-png-shadow")) {
+            map.moveLayer("moving-trails-line", "prism-png-shadow");
+          }
+          if (map.getLayer("prism-png-shadow") && map.getLayer("prism-png-layer")) {
+            map.moveLayer("prism-png-shadow", "prism-png-layer");
+            map.moveLayer("prism-png-dot", "prism-png-shadow");
           }
         } catch {  }
       } catch (err) {
@@ -612,6 +617,7 @@ export function MapView() {
 
     return () => {
       try { if (signalLossInterval) clearInterval(signalLossInterval); } catch {  }
+      routeCurvesRef.current.clear();
       map.remove();
       mapRef.current = null;
     };
@@ -644,6 +650,19 @@ export function MapView() {
     const op = planPhase === "ready" ? 0.38 : planPhase === "optimizing" ? 0.28 : planPhase === "verifying" ? 0.20 : 0.12;
     map.setPaintProperty("wards-priority", "fill-opacity", op);
   }, [incidents, planPhase, loaded]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded() || !loaded) return;
+    const routeShadow = map.getLayer("prism-route-shadow");
+    if (routeShadow) {
+      map.setLayoutProperty("prism-route-shadow", "visibility", planPhase === "ready" ? "visible" : "none");
+    }
+    const routeRemaining = map.getLayer("prism-route-remaining");
+    if (routeRemaining) {
+      map.setLayoutProperty("prism-route-remaining", "visibility", planPhase === "ready" ? "visible" : "none");
+    }
+  }, [planPhase, loaded]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -744,6 +763,7 @@ export function MapView() {
     if (!map || !loaded || !pngReadyRef.current) return;
     const src = map.getSource("prism-png-resources") as maplibregl.GeoJSONSource | undefined;
     if (!src) return;
+    console.log("[TRAIL] useEffect running, prismResources:", prismResources.length);
     const moving = prismResources.filter(r => r.status === "en_route" || r.status === "active" || r.status === "arrived" || r.status === "available");
     const fc = {
       type: "FeatureCollection",
@@ -752,26 +772,63 @@ export function MapView() {
         return {
           type: "Feature",
           geometry: { type: "Point", coordinates: [r.lng, r.lat] },
-          properties: { id: r.id, kind: r.kind, heading: r.heading, headingAdj: r.heading, icon, status: r.status },
+          properties: { id: r.id, kind: r.kind, heading: 0, headingAdj: 0, icon, status: r.status },
         };
       }),
     } as unknown as never;
     src.setData(fc as never);
     try { updateRoutes(map, prismResources.filter(r => r.status === "en_route" || r.status === "active" || r.status === "arrived"), resourceTrails); } catch {  }
     try {
+      const dispatched = prismResources.filter(r => (r.status === "en_route" || r.status === "active") && r.destLon != null && r.destLat != null);
       const trailSrc = map.getSource("moving-trails") as maplibregl.GeoJSONSource | undefined;
       if (trailSrc) {
-        const trails = {
-          type: "FeatureCollection",
-          features: Array.from(resourceTrails.entries())
-            .filter(([_, t]) => (t?.length ?? 0) > 1)
-            .map(([id, t]) => ({
+        const feats: { type: "Feature"; properties: Record<string, unknown>; geometry: { type: "LineString"; coordinates: [number, number][] } }[] = [];
+        for (const r of dispatched) {
+          const origin = r.origin ?? { lat: r.lat, lng: r.lng };
+          const existing = routeCurvesRef.current.get(r.id);
+          if (!existing || existing.length === 0) {
+            const curve = curvePoints([origin.lng, origin.lat], [r.destLon!, r.destLat!], 64);
+            routeCurvesRef.current.set(r.id, curve);
+          }
+          const curve = routeCurvesRef.current.get(r.id)!;
+          if (curve && curve.length > 1) {
+            feats.push({
+              type: "Feature",
+              properties: { id: r.id, kind: r.kind },
+              geometry: { type: "LineString", coordinates: curve },
+            });
+          }
+        }
+        trailSrc.setData({ type: "FeatureCollection", features: feats } as never);
+      }
+    } catch {  }
+    try {
+      const activeIds = new Set(prismResources.filter(r => r.status === "en_route" || r.status === "active").map(r => r.id));
+      for (const [id] of routeCurvesRef.current.entries()) {
+        if (!activeIds.has(id)) {
+          routeCurvesRef.current.delete(id);
+        }
+      }
+      for (const r of prismResources) {
+        if (r.status !== "en_route" && r.status !== "active") continue;
+        const origin = r.origin ?? { lat: r.lat, lng: r.lng };
+        if (!routeCurvesRef.current.has(r.id) && r.destLon != null && r.destLat != null) {
+          routeCurvesRef.current.set(r.id, curvePoints([origin.lng, origin.lat], [r.destLon, r.destLat], 64));
+        }
+      }
+      const trailSrc = map.getSource("moving-trails") as maplibregl.GeoJSONSource | undefined;
+      if (trailSrc) {
+        const feats: { type: "Feature"; properties: Record<string, unknown>; geometry: { type: "LineString"; coordinates: [number, number][] } }[] = [];
+        for (const [id, curve] of routeCurvesRef.current.entries()) {
+          if (curve && curve.length > 1) {
+            feats.push({
               type: "Feature",
               properties: { id },
-              geometry: { type: "LineString", coordinates: t },
-            })),
-        };
-        trailSrc.setData(trails as never);
+              geometry: { type: "LineString", coordinates: curve },
+            });
+          }
+        }
+        trailSrc.setData({ type: "FeatureCollection", features: feats } as never);
       }
     } catch {  }
   }, [prismResources, resourceTrails, loaded]);
@@ -866,11 +923,7 @@ export function MapView() {
       <div className="hud-scanline" style={{ zIndex: 1 }} />
       <div className="hud-vignette" style={{ zIndex: 1 }} />
       <div className="hud-crosshair" style={{ zIndex: 1 }} />
-      {}
-      <div style={{ position: "absolute", inset: 8, border: "1px solid rgba(204,255,0,0.08)", pointerEvents: "none", borderRadius: 2, zIndex: 1 }} />
-      <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 180, height: 2, background: "linear-gradient(90deg, transparent, rgba(204,255,0,0.55), transparent)", pointerEvents: "none", zIndex: 1 }} />
 
-      {}
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 4 }}>
         {}
         <div style={{
@@ -954,7 +1007,7 @@ export function MapView() {
             top: Math.min(hoverSignalLoss.y + 14, 420),
             background: "rgba(8,12,14,0.98)",
             border: "1px solid rgba(245,185,66,0.42)",
-            borderLeft: "2px solid #F5B942",
+            borderLeft: "none",
             borderRadius: 4, padding: "8px 9px", pointerEvents: "none", zIndex: 6, minWidth: 220,
             boxShadow: "0 10px 28px rgba(0,0,0,0.55)",
           }}>
@@ -973,7 +1026,7 @@ export function MapView() {
             top: Math.min(hoverAsset.y + 14, 420),
             background: "rgba(8,12,14,0.98)",
             border: "1px solid rgba(204,255,0,0.22)",
-            borderLeft: `2px solid ${hoverAsset.status === "en_route" ? "#CCFF00" : hoverAsset.status === "active" ? "#F5B942" : hoverAsset.status === "arrived" ? "#46E09B" : "#4A5254"}`,
+            borderLeft: "none",
             borderRadius: 4, padding: "8px 9px", pointerEvents: "none", zIndex: 6, minWidth: 228,
             boxShadow: "0 10px 28px rgba(0,0,0,0.55), 0 0 0 1px rgba(204,255,0,0.06)",
           }}>
@@ -1009,7 +1062,7 @@ export function MapView() {
             top: Math.min(hoverIncident.y + 14, 420),
             background: "rgba(8,12,14,0.98)",
             border: `1px solid ${hoverIncident.severity === "critical" ? "rgba(255,77,77,0.4)" : hoverIncident.severity === "high" ? "rgba(245,185,66,0.4)" : "rgba(72,216,255,0.4)"}`,
-            borderLeft: `2px solid ${hoverIncident.severity === "critical" ? "#FF4D4D" : hoverIncident.severity === "high" ? "#F5B942" : "#48D8FF"}`,
+            borderLeft: "none",
             borderRadius: 4, padding: "8px 9px", pointerEvents: "none", zIndex: 6, minWidth: 220,
             boxShadow: "0 10px 28px rgba(0,0,0,0.55)",
           }}>

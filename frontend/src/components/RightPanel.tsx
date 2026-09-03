@@ -35,7 +35,7 @@ export function RightPanel() {
       <div style={{ display: "flex", flexDirection: "column", height: "42%" , minHeight: 220, borderBottom: "1px solid var(--border)" }}>
         <div className="panel-header">
           <span className="panel-title"><FileText size={11} /> INCOMING REPORTS {simulationState === "idle" && <span style={{ color: "var(--text-faint)", fontWeight: 400 }}>• IDLE</span>}</span>
-          <span className="mono" style={{ fontSize: 9, color: reports.length ? "var(--lime)" : "var(--text-faint)", display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: 999, background: reports.length ? "var(--lime)" : "var(--border-strong)", animation: reports.length ? "pulse 1.2s infinite" : undefined }} /> {reports.length ? `${reports.length} • ${planPhase.toUpperCase()}` : "0 • AWAITING SIM"}</span>
+          <span className="mono" style={{ fontSize: 9, color: reports.length ? "var(--lime)" : "var(--text-faint)", display: "inline-flex", alignItems: "center", gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: 999, background: reports.length ? "var(--lime)" : "var(--border-strong)" }} /> {reports.length ? `${reports.length} • ${planPhase.toUpperCase()}` : "0 • AWAITING SIM"}</span>
         </div>
         <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", background: "var(--bg-panel)" }}>
           {reports.length === 0 ? (
@@ -191,7 +191,7 @@ export function RightPanel() {
                 exit={{ opacity: 0, y: 6 }}
                 transition={{ duration: 0.42 }}
                 style={{
-                  background: "var(--bg-elevated)", border: "1px solid var(--border)", borderLeft: `2px solid ${s.type === "satellite" ? "var(--cyan)" : s.type === "field" ? "var(--lime)" : s.type === "social" ? "var(--amber)" : "var(--purple)"}`,
+                  background: "var(--bg-elevated)", border: "1px solid var(--border)",
                   borderRadius: 3, padding: "7px 8px", display: "flex", gap: 8, alignItems: "flex-start",
                 }}
               >
